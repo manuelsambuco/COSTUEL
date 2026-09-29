@@ -14,7 +14,7 @@ self.addEventListener("push", (event) => {
   const options = {
     body: data.body || "",
     icon: "{% static 'challenge/icons/icon-192.png' %}",
-    badge: "{% static 'challenge/icons/badge-72.png' %}",
+    badge: "{% static 'challenge/icons/badge-96.png' %}",
     data: { url: data.url || "/" },
   };
   if (data.tag) {

@@ -7,7 +7,7 @@
   <meta name="description" content="Sfida dei 100 piegamenti al giorno">
   <meta name="theme-color" content="#16161d">
   <link rel="manifest" href="{% url 'manifest' %}">
-  <link rel="icon" type="image/png" href="{% static 'challenge/icons/icon-192.png' %}">
+  <link rel="icon" type="image/png" href="{% static 'challenge/icons/favicon-64.png' %}">
   <link rel="apple-touch-icon" href="{% static 'challenge/icons/apple-touch-icon.png' %}">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -17,7 +17,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="{% url 'home' %}"><span class="brand-mark">100</span> COSTUEL</a>
+    <a class="brand" href="{% url 'home' %}"><img class="brand-mark" src="{% static 'challenge/icons/favicon-64.png' %}" alt="" width="36" height="36"> COSTUEL</a>
     {% if user.is_authenticated %}
       <form method="post" action="{% url 'logout' %}" class="topbar-user">
         {% csrf_token %}
