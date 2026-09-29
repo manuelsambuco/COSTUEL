@@ -144,12 +144,12 @@ Remove-Item Env:DATABASE_URL
 ### Backup dei dati
 
 Neon gratis conserva la cronologia solo per 6 ore. Ogni tanto (es. una volta a settimana) salva una copia:
+**doppio clic su `backup.bat`** nella cartella del progetto.
 
-```powershell
-python backup.py
-```
-
-Ti chiede la stringa di connessione di Neon (incollala e premi Invio: non viene mostrata) e crea
+La prima volta si apre una finestra: su Neon premi *Connect* (senza pooling) → *Copy*, poi nella finestra
+premi **Incolla** e **Fai il backup**. Con *Ricorda su questo PC* la stringa viene salvata nel file `.env`
+(chiave `NEON_DATABASE_URL`) e dalle volte successive il backup parte da solo. Se cambi la password su Neon,
+lo script se ne accorge, dimentica quella vecchia e te la richiede. Il backup viene salvato in
 `backups/backup-AAAA-MM-GG_HHMM.json`. La cartella `backups/` non va su GitHub perché contiene dati
 personali (e le password cifrate), ma essendo sul Desktop viene salvata anche su OneDrive.
 
