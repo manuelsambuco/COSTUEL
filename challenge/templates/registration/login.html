@@ -1,0 +1,26 @@
+{% extends "challenge/base.html" %}
+
+{% block title %}Accedi · COSTUEL{% endblock %}
+
+{% block content %}
+  <section class="card auth">
+    <h1>Accedi</h1>
+    <p class="muted">100 piegamenti al giorno. Nessuna scusa.</p>
+    <form method="post" class="form">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="form-error">Username o password errati.</div>
+      {% endif %}
+      <label>Username
+        <input type="text" name="username" autocomplete="username" autocapitalize="none" required autofocus
+               value="{{ form.username.value|default:'' }}">
+      </label>
+      <label>Password
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="btn btn-block">Entra</button>
+    </form>
+    <p class="muted center">Non hai un account? <a href="{% url 'signup' %}">Registrati</a></p>
+  </section>
+{% endblock %}

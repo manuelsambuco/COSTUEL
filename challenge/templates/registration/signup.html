@@ -1,0 +1,21 @@
+{% extends "challenge/base.html" %}
+
+{% block title %}Registrati · COSTUEL{% endblock %}
+
+{% block content %}
+  <section class="card auth">
+    <h1>Unisciti alla sfida</h1>
+    <form method="post" class="form" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <label>{{ field.label }}
+          {{ field }}
+          {% if field.errors %}<span class="form-error">{{ field.errors|join:" " }}</span>{% endif %}
+          {% if field.name == "first_name" %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+        </label>
+      {% endfor %}
+      <button type="submit" class="btn btn-block">Crea account</button>
+    </form>
+    <p class="muted center">Hai già un account? <a href="{% url 'login' %}">Accedi</a></p>
+  </section>
+{% endblock %}

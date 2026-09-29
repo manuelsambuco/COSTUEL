@@ -1,0 +1,2 @@
+# Lo script di build gira su Linux (Render): deve avere fine riga LF
+*.sh text eol=lf

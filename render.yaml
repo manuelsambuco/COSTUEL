@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: costuel
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: bash build.sh
+    startCommand: gunicorn config.wsgi:application --workers 2 --threads 4 --timeout 60
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.9
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false # incolla la stringa di connessione di Neon
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_CONTACT
+        sync: false # es. mailto:tuo@indirizzo.it
+      - key: SIGNUP_CODE
+        sync: false # codice da dare agli amici per registrarsi

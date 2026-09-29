@@ -1,0 +1,49 @@
+{% load static %}<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}COSTUEL{% endblock %}</title>
+  <meta name="description" content="Sfida dei 100 piegamenti al giorno">
+  <meta name="theme-color" content="#16161d">
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <link rel="icon" type="image/png" href="{% static 'challenge/icons/icon-192.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'challenge/icons/apple-touch-icon.png' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="COSTUEL">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="{% static 'challenge/app.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{% url 'home' %}"><span class="brand-mark">100</span> COSTUEL</a>
+    {% if user.is_authenticated %}
+      <form method="post" action="{% url 'logout' %}" class="topbar-user">
+        {% csrf_token %}
+        <span class="muted">{{ user.first_name|default:user.username }}</span>
+        <button type="submit" class="link-btn">Esci</button>
+      </form>
+    {% endif %}
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    window.COSTUEL = {
+      vapidPublicKey: "{{ VAPID_PUBLIC_KEY }}",
+      csrfToken: "{{ csrf_token }}",
+      urls: {
+        board: "{% url 'board' %}",
+        subscribe: "{% url 'push_subscribe' %}",
+        unsubscribe: "{% url 'push_unsubscribe' %}",
+        test: "{% url 'push_test' %}",
+        sw: "{% url 'service_worker' %}"
+      }
+    };
+  </script>
+  <script src="{% static 'challenge/app.js' %}" defer></script>
+</body>
+</html>

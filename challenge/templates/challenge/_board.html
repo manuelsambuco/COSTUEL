@@ -1,0 +1,85 @@
+{% if messages %}
+  <div class="toasts">
+    {% for message in messages %}
+      <div class="toast toast-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<section class="card me{% if log.completed %} is-done{% endif %}">
+  <div class="ring-wrap">
+    <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+      <circle class="ring-track" cx="60" cy="60" r="52" />
+      {% if log.total %}
+        <circle class="ring-value" cx="60" cy="60" r="52" pathLength="100"
+                stroke-dasharray="{{ log.percent }} 100" />
+      {% endif %}
+    </svg>
+    <div class="ring-label">
+      <span class="ring-total">{{ log.total }}</span>
+      <span class="ring-goal">/ {{ log.goal }}</span>
+    </div>
+  </div>
+
+  <p class="status">
+    {% if log.completed %}
+      <strong>Sfida di oggi completata! 🏆</strong>
+    {% else %}
+      Ne mancano <strong>{{ log.remaining }}</strong> oggi
+    {% endif %}
+  </p>
+
+  <form method="post" action="{% url 'add' %}" class="quick-add" data-ajax>
+    {% csrf_token %}
+    {% for n in buttons %}
+      <button type="submit" name="reps" value="{{ n }}" class="btn btn-add"
+              {% if log.completed %}disabled{% endif %}>+{{ n }}</button>
+    {% endfor %}
+  </form>
+
+  {% if entries %}
+    <div class="series">
+      <ul class="series-list">
+        {% for e in entries %}
+          <li><span class="chip">+{{ e.reps }}</span><span class="muted">{{ e.created_at|time:"H:i" }}</span></li>
+        {% endfor %}
+      </ul>
+      <form method="post" action="{% url 'undo' %}" data-ajax>
+        {% csrf_token %}
+        <button type="submit" class="link-btn">↶ Annulla ultima</button>
+      </form>
+    </div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Ultimi 7 giorni</h2>
+  <ol class="week">
+    {% for d in week %}
+      <li class="day{% if d.completed %} done{% elif d.total %} partial{% endif %}{% if d.is_today %} today{% endif %}"
+          title="{{ d.day|date:'l j F' }}: {{ d.total }}/{{ d.goal }}">
+        <span class="day-dot">{% if d.completed %}✓{% elif d.total %}{{ d.total }}{% endif %}</span>
+        <span class="day-name">{{ d.day|date:"D"|slice:":3" }}</span>
+      </li>
+    {% endfor %}
+  </ol>
+</section>
+
+<section class="card">
+  <h2>Gli altri oggi</h2>
+  {% if others %}
+    <ul class="others">
+      {% for o in others %}
+        <li class="other{% if o.completed %} done{% endif %}">
+          <div class="other-head">
+            <span class="other-name">{{ o.name }}{% if o.completed %} 🏆{% endif %}</span>
+            <span class="other-count">{{ o.total }}/{{ o.goal }}</span>
+          </div>
+          <div class="bar"><div class="bar-fill" style="width: {{ o.percent }}%"></div></div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">Nessun altro partecipante ancora. Manda il link al tuo amico perché si registri!</p>
+  {% endif %}
+</section>
