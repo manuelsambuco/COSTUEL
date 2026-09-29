@@ -67,7 +67,11 @@ Servono 3 account gratuiti: **GitHub**, **Neon** (database), **Render** (server)
    - `SIGNUP_CODE` → un codice a tua scelta da dare solo agli amici
 
    Dopo il deploy l'app è su `https://costuel-xxxx.onrender.com`.
-   Per entrare in /admin: dalla *Shell* di Render esegui `python manage.py createsuperuser`.
+   Per entrare in /admin (facoltativo): la Shell di Render non c'è nel piano gratuito, quindi
+   crea l'amministratore dal tuo PC puntando al database di Neon:
+   ```powershell
+   $env:DATABASE_URL="<stringa di Neon>"; python manage.py createsuperuser; Remove-Item Env:DATABASE_URL
+   ```
 
 Ogni `git push` successivo ripubblica l'app in automatico.
 
