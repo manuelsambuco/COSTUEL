@@ -3,11 +3,11 @@
 from dataclasses import dataclass
 from datetime import timedelta
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
 from .models import DailyLog, Profile, PushupEntry
+from .social import challenge_members
 
 MAX_REPS_PER_ENTRY = 500
 
@@ -73,17 +73,8 @@ def undo_last(user):
     return entry
 
 
-def challenge_members(user):
-    """Le persone con cui l'utente condivide la sfida.
-
-    Fase 1: tutti gli utenti registrati. Con la parte social questa funzione
-    restituirà amici e membri dei gruppi: il resto del codice non cambia.
-    """
-    return get_user_model().objects.filter(is_active=True).exclude(pk=user.pk).order_by("username")
-
-
 def today_board(user):
-    """Progressi di oggi per l'utente e per gli altri partecipanti."""
+    """Progressi di oggi di amici e membri dei gruppi dell'utente."""
     others = list(challenge_members(user))
     logs = {
         log.user_id: log

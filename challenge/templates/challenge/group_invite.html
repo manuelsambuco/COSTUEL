@@ -1,0 +1,23 @@
+{% extends "challenge/base.html" %}
+
+{% block title %}Invito a {{ group.name }} · COSTUEL{% endblock %}
+
+{% block content %}
+  <section class="card auth center">
+    <p class="muted">Sei stato invitato nel gruppo</p>
+    <h1>{{ group.name }}</h1>
+    <p class="muted">{{ member_count }} membr{{ member_count|pluralize:"o,i" }} · 100 piegamenti al giorno 💪</p>
+
+    {% if user.is_authenticated %}
+      <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-block">Unisciti al gruppo</button>
+      </form>
+    {% else %}
+      <div class="stack">
+        <a class="btn btn-block" href="{% url 'signup' %}?next={{ request.path|urlencode }}">Registrati e unisciti</a>
+        <a class="btn btn-block btn-ghost" href="{% url 'login' %}?next={{ request.path|urlencode }}">Ho già un account</a>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

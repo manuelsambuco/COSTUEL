@@ -15,9 +15,10 @@ class SignupForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         fields = ("username", "first_name")
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, require_code=True, **kwargs):
         super().__init__(*args, **kwargs)
-        if not settings.SIGNUP_CODE:
+        # Niente codice se non è configurato o se si arriva dal link d'invito di un gruppo
+        if not settings.SIGNUP_CODE or not require_code:
             del self.fields["invite_code"]
 
     def clean_invite_code(self):

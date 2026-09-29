@@ -28,9 +28,40 @@
     {% endif %}
   </header>
 
-  <main class="container">
+  <main class="container{% if user.is_authenticated %} has-nav{% endif %}">
+    {% block messages %}
+      {% if messages %}
+        <div class="toasts">
+          {% for message in messages %}
+            <div class="toast toast-{{ message.tags }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endblock %}
     {% block content %}{% endblock %}
   </main>
+
+  {% if user.is_authenticated %}
+    <nav class="tabbar" aria-label="Sezioni">
+      <a href="{% url 'home' %}" class="tab{% if nav_section == 'home' %} active{% endif %}"{% if nav_section == 'home' %} aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v4.5l3 2"/></svg>
+        <span>Oggi</span>
+      </a>
+      <a href="{% url 'friends' %}" class="tab{% if nav_section == 'friends' %} active{% endif %}"{% if nav_section == 'friends' %} aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19.5c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5"/><path d="M16 4.8a3.5 3.5 0 0 1 0 6.4M18.3 14.4c1.6.9 2.7 2.7 3.2 5.1"/></svg>
+        <span>Amici</span>
+        {% if pending_requests %}<b class="tab-badge" aria-label="{{ pending_requests }} richieste">{{ pending_requests }}</b>{% endif %}
+      </a>
+      <a href="{% url 'groups' %}" class="tab{% if nav_section == 'groups' %} active{% endif %}"{% if nav_section == 'groups' %} aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4.5v1.5A3.5 3.5 0 0 0 8 11M17 6h2.5v1.5A3.5 3.5 0 0 1 16 11"/></svg>
+        <span>Gruppi</span>
+      </a>
+      <a href="{% url 'stats' %}" class="tab{% if nav_section == 'stats' %} active{% endif %}"{% if nav_section == 'stats' %} aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span>Statistiche</span>
+      </a>
+    </nav>
+  {% endif %}
 
   <script>
     window.COSTUEL = {

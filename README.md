@@ -7,14 +7,23 @@ con notifiche push ogni volta che qualcuno registra una serie.
 (quelli oltre i 100 non contano), annulla ultima serie, progressi degli altri in tempo reale,
 ultimi 7 giorni, notifiche push, installazione come app.
 
+**Fase 2 (fatta):** amicizie (richiesta per username, accetta/rifiuta), gruppi con link d'invito
+condivisibile (chi apre il link si registra senza codice), classifiche oggi/settimana/mese per
+amici e gruppi, statistiche personali (giorni di fila, record, grafico settimanale, calendario
+mensile), barra di navigazione in basso. Vedi e ricevi notifiche solo da amici e membri dei tuoi gruppi.
+
 ## Struttura
 
 ```
 config/settings.py        impostazioni (tutto configurabile da variabili d'ambiente)
 challenge/models.py       Profile (obiettivo), DailyLog (totale del giorno), PushupEntry (serie), PushSubscription
-challenge/services.py     logica: aggiunta con tetto, annulla, classifica, ultimi giorni
+                          + Friendship, Group, GroupMembership
+challenge/services.py     logica: aggiunta con tetto, annulla, progressi di oggi, ultimi giorni
+challenge/social.py       amicizie, gruppi, challenge_members() (chi vede chi)
+challenge/stats.py        periodi, classifiche, giorni di fila, calendario mensile
 challenge/push.py         invio notifiche
-challenge/views.py        pagine e API
+challenge/views.py        pagina Oggi, registrazione, notifiche, PWA
+challenge/views_social.py pagine Amici, Gruppi, Statistiche
 challenge/templates/      HTML, service worker (sw.js), manifest
 challenge/static/         CSS, JS, icone
 challenge/tests.py        test automatici
@@ -23,8 +32,8 @@ challenge/tests.py        test automatici
 Punti pensati per le fasi successive:
 - **Obiettivo modificabile:** `Profile.daily_goal` esiste già (oggi 100 per tutti). Ogni giorno
   salva una copia dell'obiettivo (`DailyLog.goal`), così cambiarlo non altera lo storico.
-- **Amici e gruppi:** `services.challenge_members()` oggi restituisce tutti gli utenti. Basterà
-  farle restituire amici e membri dei gruppi: notifiche e classifica si adatteranno da sole.
+- **Cerchia della sfida:** `social.challenge_members()` decide chi vede i tuoi progressi e riceve
+  le tue notifiche (amici + membri dei tuoi gruppi).
 
 ## Avvio in locale (Windows)
 

@@ -1,0 +1,51 @@
+{% extends "challenge/base.html" %}
+
+{% block title %}Gruppi · COSTUEL{% endblock %}
+
+{% block content %}
+  <h1 class="page-title">Gruppi</h1>
+
+  {% if groups %}
+    <ul class="group-list">
+      {% for g in groups %}
+        <li>
+          <a class="card group-card" href="{% url 'group_detail' g.pk %}">
+            <div>
+              <strong class="group-name">{{ g.name }}</strong>
+              <small class="muted">{{ g.member_count }} membr{{ g.member_count|pluralize:"o,i" }}</small>
+            </div>
+            <div class="group-today{% if g.done_today == g.member_count %} all-done{% endif %}">
+              <strong>{{ g.done_today }}/{{ g.member_count }}</strong>
+              <small class="muted">finito oggi</small>
+            </div>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <section class="card">
+      <p class="muted">Non sei ancora in nessun gruppo. Creane uno e invita gli amici con un link,
+        oppure entra con il link che ti hanno mandato.</p>
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <h2>Crea un gruppo</h2>
+    <form method="post" action="{% url 'group_create' %}" class="inline-form">
+      {% csrf_token %}
+      <input type="text" name="name" maxlength="40" placeholder="Es. Palestra del lunedì" required
+             aria-label="Nome del gruppo">
+      <button class="btn">Crea</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Entra con un invito</h2>
+    <form method="post" action="{% url 'group_join_by_code' %}" class="inline-form">
+      {% csrf_token %}
+      <input type="text" name="code" placeholder="Incolla link o codice" autocapitalize="none"
+             autocomplete="off" required aria-label="Link o codice d'invito">
+      <button class="btn btn-ghost">Entra</button>
+    </form>
+  </section>
+{% endblock %}

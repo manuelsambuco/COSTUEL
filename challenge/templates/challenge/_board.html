@@ -73,7 +73,7 @@
 </section>
 
 <section class="card">
-  <h2>Gli altri oggi</h2>
+  <h2>Amici e gruppi oggi</h2>
   {% if others %}
     <ul class="others">
       {% for o in others %}
@@ -87,6 +87,10 @@
       {% endfor %}
     </ul>
   {% else %}
-    <p class="muted">Nessun altro partecipante ancora. Manda il link al tuo amico perché si registri!</p>
+    <p class="muted">Sei ancora da solo in questa sfida.</p>
+    <div class="empty-actions">
+      <a class="btn btn-small" href="{% url 'friends' %}">Aggiungi amici</a>
+      <a class="btn btn-small btn-ghost" href="{% url 'groups' %}">Crea un gruppo</a>
+    </div>
   {% endif %}
 </section>

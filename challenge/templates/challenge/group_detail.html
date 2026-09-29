@@ -1,0 +1,73 @@
+{% extends "challenge/base.html" %}
+
+{% block title %}{{ group.name }} · COSTUEL{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <a href="{% url 'groups' %}" class="back" aria-label="Torna ai gruppi">‹</a>
+    <div>
+      <h1 class="page-title">{{ group.name }}</h1>
+      <p class="muted small">{{ members|length }} membr{{ members|length|pluralize:"o,i" }}</p>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2>Classifica</h2>
+    {% include "challenge/_ranking.html" %}
+  </section>
+
+  <section class="card">
+    <h2>Invita nel gruppo</h2>
+    <div class="invite">
+      <input type="text" readonly value="{{ invite_url }}" aria-label="Link d'invito" id="invite-url">
+      <button type="button" class="btn btn-small" data-share="{{ invite_url }}"
+              data-share-text="Unisciti al gruppo “{{ group.name }}” su COSTUEL: 100 piegamenti al giorno! 💪">
+        Condividi
+      </button>
+    </div>
+    <p class="muted small">Chi apre il link può registrarsi ed entrare subito, senza codice.</p>
+    {% if is_admin %}
+      <form method="post" action="{% url 'group_new_link' group.pk %}"
+            data-confirm="Creare un nuovo link? Quello attuale smetterà di funzionare.">
+        {% csrf_token %}
+        <button class="link-btn">Genera un nuovo link</button>
+      </form>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Membri</h2>
+    <ul class="list">
+      {% for m in members %}
+        <li class="list-row">
+          <div>
+            <strong>{{ m.user.first_name|default:m.user.username }}</strong>
+            <small class="muted">@{{ m.user.username }}</small>
+            {% if m.is_admin %}<span class="pill">admin</span>{% endif %}
+          </div>
+          {% if is_admin and m.user.pk != user.pk %}
+            <form method="post" action="{% url 'group_remove_member' group.pk m.user.pk %}"
+                  data-confirm="Rimuovere {{ m.user.first_name|default:m.user.username }} dal gruppo?">
+              {% csrf_token %}
+              <button class="link-btn">Rimuovi</button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <div class="danger-zone">
+    <form method="post" action="{% url 'group_leave' group.pk %}" data-confirm="Uscire da “{{ group.name }}”?">
+      {% csrf_token %}
+      <button class="link-btn">Esci dal gruppo</button>
+    </form>
+    {% if is_admin %}
+      <form method="post" action="{% url 'group_delete' group.pk %}"
+            data-confirm="Eliminare “{{ group.name }}” per tutti? Non si può annullare.">
+        {% csrf_token %}
+        <button class="link-btn danger">Elimina gruppo</button>
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}

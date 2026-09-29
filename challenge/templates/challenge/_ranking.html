@@ -1,0 +1,32 @@
+{# Classifica con i tab Oggi / Settimana / Mese. Richiede: tabs, period, ranking #}
+<nav class="segmented" aria-label="Periodo">
+  {% for tab in tabs %}
+    <a href="?periodo={{ tab.key }}" class="segment{% if tab.active %} active{% endif %}"{% if tab.active %} aria-current="true"{% endif %}>{{ tab.label }}</a>
+  {% endfor %}
+</nav>
+{% if period.key != "oggi" %}
+  <p class="muted period-label">{{ period.label }} · {{ period.days_elapsed }} di {{ period.days_total }} giorni</p>
+{% endif %}
+
+<ol class="ranking">
+  {% for r in ranking %}
+    <li class="rank-row{% if r.is_me %} is-me{% endif %}{% if r.completed %} done{% endif %}">
+      <span class="rank-pos">
+        {% if r.reps and r.rank == 1 %}🥇{% elif r.reps and r.rank == 2 %}🥈{% elif r.reps and r.rank == 3 %}🥉{% else %}{{ r.rank }}{% endif %}
+      </span>
+      <div class="rank-main">
+        <div class="rank-head">
+          <span class="rank-name">{{ r.name }}{% if r.is_me %} <small class="muted">(tu)</small>{% endif %}</span>
+          <span class="rank-value">
+            {% if period.key == "oggi" %}
+              {{ r.reps }}/{{ r.goal }}{% if r.completed %} 🏆{% endif %}
+            {% else %}
+              {{ r.reps }} <small class="muted">· {{ r.done }}/{{ period.days_elapsed }} ✓</small>
+            {% endif %}
+          </span>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width: {{ r.percent }}%"></div></div>
+      </div>
+    </li>
+  {% endfor %}
+</ol>

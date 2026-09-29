@@ -2,6 +2,36 @@
   const cfg = window.COSTUEL;
   const board = document.getElementById("board");
 
+  // --- Conferma prima delle azioni delicate (form con data-confirm) ---
+  document.addEventListener("submit", (event) => {
+    const message = event.target.dataset && event.target.dataset.confirm;
+    if (message && !window.confirm(message)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+
+  // --- Condividi / copia il link d'invito ---
+  document.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-share]");
+    if (!button) return;
+    const url = button.dataset.share;
+    const text = button.dataset.shareText || "";
+    if (navigator.share) {
+      try { await navigator.share({ title: "COSTUEL", text, url }); } catch (e) { /* annullato */ }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (e) {
+      const input = document.getElementById("invite-url");
+      if (input) { input.select(); document.execCommand("copy"); }
+    }
+    const original = button.textContent;
+    button.textContent = "Copiato ✓";
+    setTimeout(() => { button.textContent = original; }, 2000);
+  });
+
   // --- Pulsanti senza ricaricare la pagina ---
   // Funziona anche senza JavaScript: i form fanno un normale POST.
 

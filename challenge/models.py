@@ -1,3 +1,5 @@
+import secrets
+
 from django.conf import settings
 from django.db import models
 
@@ -78,3 +80,63 @@ class PushSubscription(models.Model):
 
     def as_subscription_info(self):
         return {"endpoint": self.endpoint, "keys": {"p256dh": self.p256dh, "auth": self.auth}}
+
+
+# --- Social ---
+
+
+class Friendship(models.Model):
+    """Richiesta di amicizia da `from_user` a `to_user`. Diventa amicizia quando è accettata."""
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    STATUS_CHOICES = [(PENDING, "In attesa"), (ACCEPTED, "Accettata")]
+
+    from_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="friendships_sent")
+    to_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="friendships_received")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["from_user", "to_user"], name="unique_friendship_pair"),
+            models.CheckConstraint(condition=~models.Q(from_user=models.F("to_user")), name="no_self_friendship"),
+        ]
+
+    def __str__(self):
+        return f"{self.from_user} → {self.to_user} ({self.status})"
+
+
+def new_invite_code():
+    return secrets.token_urlsafe(6)
+
+
+class Group(models.Model):
+    name = models.CharField(max_length=40)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="groups_created"
+    )
+    # Chi ha questo codice (via link) può entrare nel gruppo
+    invite_code = models.CharField(max_length=20, unique=True, default=new_invite_code)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class GroupMembership(models.Model):
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="memberships")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="group_memberships")
+    is_admin = models.BooleanField(default=False)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["group", "user"], name="unique_group_member")]
+        ordering = ["joined_at", "pk"]
+
+    def __str__(self):
+        return f"{self.user} in {self.group}"

@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -7,10 +7,14 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from . import push, services
-from .models import DailyLog, PushSubscription
+from . import push, services, social, stats
+from .models import DailyLog, Friendship, Group, GroupMembership, PushSubscription
 
 User = get_user_model()
+
+
+def make_friends(a, b):
+    return Friendship.objects.create(from_user=a, to_user=b, status=Friendship.ACCEPTED)
 
 
 class AddPushupsTests(TestCase):
@@ -84,6 +88,7 @@ class ViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("manuel", password="x", first_name="Manuel")
         self.friend = User.objects.create_user("luca", password="x", first_name="Luca")
+        make_friends(self.user, self.friend)
         self.client.force_login(self.user)
 
     def test_home_requires_login(self):
@@ -158,6 +163,10 @@ class NotificationTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("manuel", password="x", first_name="Manuel")
         self.friend = User.objects.create_user("luca", password="x")
+        make_friends(self.user, self.friend)
+        # uno sconosciuto con le notifiche attive non deve ricevere nulla
+        stranger = User.objects.create_user("sconosciuto", password="x")
+        PushSubscription.objects.create(user=stranger, endpoint="https://push.example/x", p256dh="k", auth="a")
         PushSubscription.objects.create(user=self.friend, endpoint="https://push.example/luca", p256dh="k", auth="a")
         PushSubscription.objects.create(user=self.user, endpoint="https://push.example/me", p256dh="k", auth="a")
         self.client.force_login(self.user)
@@ -214,3 +223,229 @@ class VapidKeyTests(TestCase):
         headers = vapid.sign({"sub": "mailto:a@b.c", "aud": "https://fcm.googleapis.com"})
         self.assertIn("vapid", headers["Authorization"])
         self.assertEqual(len(lines["VAPID_PUBLIC_KEY"]), 87)  # 65 byte in base64url
+
+
+class FriendshipTests(TestCase):
+    def setUp(self):
+        self.a = User.objects.create_user("manuel", password="x")
+        self.b = User.objects.create_user("luca", password="x")
+
+    def test_request_accept_and_remove(self):
+        f, created = social.send_friend_request(self.a, "Luca")  # username senza distinzione di maiuscole
+        self.assertTrue(created)
+        self.assertFalse(social.are_friends(self.a, self.b))
+        self.assertEqual(list(social.incoming_requests(self.b)), [f])
+        social.accept_request(self.b, f.pk)
+        self.assertTrue(social.are_friends(self.a, self.b))
+        self.assertEqual(list(social.friends_of(self.a)), [self.b])
+        self.assertEqual(list(social.friends_of(self.b)), [self.a])
+        social.remove_friend(self.b, self.a.pk)
+        self.assertFalse(social.are_friends(self.a, self.b))
+
+    def test_crossed_requests_become_friendship(self):
+        social.send_friend_request(self.a, "luca")
+        _, created = social.send_friend_request(self.b, "manuel")
+        self.assertFalse(created)
+        self.assertTrue(social.are_friends(self.a, self.b))
+        self.assertEqual(Friendship.objects.count(), 1)
+
+    def test_invalid_requests(self):
+        for username in ("manuel", "nessuno"):
+            with self.assertRaises(social.SocialError):
+                social.send_friend_request(self.a, username)
+        social.send_friend_request(self.a, "luca")
+        with self.assertRaises(social.SocialError):
+            social.send_friend_request(self.a, "luca")
+
+    def test_only_recipient_can_accept(self):
+        f, _ = social.send_friend_request(self.a, "luca")
+        with self.assertRaises(social.SocialError):
+            social.accept_request(self.a, f.pk)
+
+    def test_decline(self):
+        f, _ = social.send_friend_request(self.a, "luca")
+        social.decline_request(self.b, f.pk)
+        self.assertFalse(Friendship.objects.exists())
+
+    def test_friends_page_flow(self):
+        self.client.force_login(self.a)
+        self.client.post(reverse("friend_request"), {"username": "luca"})
+        self.client.force_login(self.b)
+        response = self.client.get(reverse("friends"))
+        self.assertContains(response, "Richieste ricevute")
+        self.assertContains(response, 'class="tab-badge"')
+        f = Friendship.objects.get()
+        self.client.post(reverse("friend_accept", args=[f.pk]))
+        services.add_pushups(self.a, 30)
+        for periodo in ("oggi", "settimana", "mese"):
+            response = self.client.get(reverse("friends"), {"periodo": periodo})
+            self.assertContains(response, "Classifica amici")
+            self.assertContains(response, "manuel")
+
+
+class GroupTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user("manuel", password="x")
+        self.member = User.objects.create_user("luca", password="x")
+        self.stranger = User.objects.create_user("marco", password="x")
+        self.group = social.create_group(self.admin, "Palestra")
+        social.join_group(self.member, self.group.invite_code)
+
+    def test_members_see_each_other_but_not_strangers(self):
+        self.assertIn(self.member, social.challenge_members(self.admin))
+        self.assertIn(self.admin, social.challenge_members(self.member))
+        self.assertNotIn(self.stranger, social.challenge_members(self.admin))
+        self.assertNotIn(self.admin, social.challenge_members(self.admin))
+
+    def test_friend_and_group_member_listed_once(self):
+        make_friends(self.admin, self.member)
+        self.assertEqual(list(social.challenge_members(self.admin)), [self.member])
+
+    def test_join_twice_is_harmless(self):
+        _, joined = social.join_group(self.member, self.group.invite_code)
+        self.assertFalse(joined)
+        with self.assertRaises(social.SocialError):
+            social.join_group(self.member, "codice-sbagliato")
+
+    def test_admin_leaving_hands_over(self):
+        social.leave_group(self.admin, self.group.pk)
+        self.assertTrue(GroupMembership.objects.get(user=self.member).is_admin)
+        social.leave_group(self.member, self.group.pk)
+        self.assertFalse(Group.objects.exists())
+
+    def test_only_admin_can_manage(self):
+        with self.assertRaises(social.SocialError):
+            social.remove_member(self.member, self.group.pk, self.admin.pk)
+        with self.assertRaises(social.SocialError):
+            social.delete_group(self.member, self.group.pk)
+        social.remove_member(self.admin, self.group.pk, self.member.pk)
+        self.assertEqual(self.group.memberships.count(), 1)
+
+    def test_new_link_invalidates_old(self):
+        old = self.group.invite_code
+        social.regenerate_invite(self.admin, self.group.pk)
+        with self.assertRaises(social.SocialError):
+            social.join_group(self.stranger, old)
+
+    def test_detail_hidden_from_non_members(self):
+        self.client.force_login(self.stranger)
+        self.assertEqual(self.client.get(reverse("group_detail", args=[self.group.pk])).status_code, 404)
+
+    def test_group_pages(self):
+        services.add_pushups(self.member, 100)
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("groups"))
+        self.assertContains(response, "Palestra")
+        self.assertContains(response, "1/2")  # uno su due ha finito oggi
+        response = self.client.get(reverse("group_detail", args=[self.group.pk]), {"periodo": "settimana"})
+        self.assertContains(response, f"/g/{self.group.invite_code}/")
+        self.assertContains(response, "🥇")
+
+    def test_join_via_link(self):
+        self.client.force_login(self.stranger)
+        url = reverse("group_invite", args=[self.group.invite_code])
+        self.assertContains(self.client.get(url), "Unisciti al gruppo")
+        response = self.client.post(url)
+        self.assertRedirects(response, reverse("group_detail", args=[self.group.pk]))
+        self.assertTrue(social.get_membership(self.stranger, self.group.pk))
+
+    def test_join_by_pasted_link(self):
+        self.client.force_login(self.stranger)
+        link = f"https://costuel.onrender.com/g/{self.group.invite_code}/"
+        self.client.post(reverse("group_join_by_code"), {"code": link})
+        self.assertTrue(social.get_membership(self.stranger, self.group.pk))
+
+    @override_settings(SIGNUP_CODE="segreto")
+    def test_signup_from_group_link_needs_no_code(self):
+        url = reverse("group_invite", args=[self.group.invite_code])
+        self.client.get(url)  # visita da non registrato
+        response = self.client.post(reverse("signup"), {
+            "username": "giulia", "first_name": "Giulia",
+            "password1": "Piegamenti!2026", "password2": "Piegamenti!2026", "next": url,
+        })
+        self.assertRedirects(response, url)
+        self.client.post(url)
+        self.assertTrue(social.get_membership(User.objects.get(username="giulia"), self.group.pk))
+
+    @override_settings(SIGNUP_CODE="segreto")
+    def test_signup_without_group_link_still_needs_code(self):
+        response = self.client.post(reverse("signup"), {
+            "username": "giulia", "password1": "Piegamenti!2026", "password2": "Piegamenti!2026",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username="giulia").exists())
+
+    def test_signup_ignores_external_next(self):
+        response = self.client.post(reverse("signup"), {
+            "username": "giulia", "password1": "Piegamenti!2026", "password2": "Piegamenti!2026",
+            "next": "https://sito-malevolo.example/",
+        })
+        self.assertRedirects(response, reverse("home"))
+
+
+class StatsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("manuel", password="x")
+        self.today = date(2026, 9, 30)  # mercoledì
+
+    def log(self, days_ago, total, user=None):
+        DailyLog.objects.create(user=user or self.user, day=self.today - timedelta(days=days_ago), goal=100, total=total)
+
+    def test_periods(self):
+        week = stats.get_period("settimana", self.today)
+        self.assertEqual(week.start, date(2026, 9, 28))  # lunedì
+        self.assertEqual(week.days_elapsed, 3)
+        month = stats.get_period("mese", self.today)
+        self.assertEqual((month.start, month.end, month.days_elapsed), (date(2026, 9, 1), date(2026, 9, 30), 30))
+        self.assertEqual(stats.get_period("boh", self.today).key, "oggi")
+
+    def test_streaks(self):
+        for d in (0, 1, 2):
+            self.log(d, 100)
+        self.log(3, 50)
+        for d in (4, 5, 6, 7):
+            self.log(d, 100)
+        self.assertEqual(stats.streaks(self.user, self.today), (3, 4))
+
+    def test_streak_survives_unfinished_today(self):
+        self.log(0, 40)
+        self.log(1, 100)
+        self.log(2, 100)
+        self.assertEqual(stats.streaks(self.user, self.today)[0], 2)
+
+    def test_leaderboard(self):
+        other = User.objects.create_user("luca", password="x")
+        self.log(0, 100)
+        self.log(1, 60)
+        self.log(0, 100, other)
+        self.log(1, 100, other)
+        rows = stats.leaderboard([self.user, other], stats.get_period("settimana", self.today), me=self.user)
+        self.assertEqual([r["username"] for r in rows], ["luca", "manuel"])
+        self.assertEqual((rows[0]["reps"], rows[0]["done"], rows[0]["percent"]), (200, 2, 67))
+        self.assertEqual((rows[1]["reps"], rows[1]["done"], rows[1]["rank"]), (160, 1, 2))
+        self.assertTrue(rows[1]["is_me"])
+
+    def test_leaderboard_ties_share_rank(self):
+        other = User.objects.create_user("luca", password="x")
+        rows = stats.leaderboard([self.user, other], stats.get_period("oggi", self.today))
+        self.assertEqual([r["rank"] for r in rows], [1, 1])
+
+    def test_month_calendar(self):
+        self.log(0, 100)
+        self.log(1, 50)
+        cal = stats.month_calendar(self.user, 2026, 9, self.today)
+        self.assertEqual((cal["reps"], cal["done"], cal["days_elapsed"], cal["rate"]), (150, 1, 30, 3))
+        self.assertEqual(len(cal["weeks"][0]), 7)
+        self.assertIsNone(cal["weeks"][0][0])  # 1 settembre 2026 è martedì
+        self.assertIsNone(cal["next"])
+        self.assertEqual(cal["prev"], "2026-08")
+
+    def test_stats_page(self):
+        self.client.force_login(self.user)
+        services.add_pushups(self.user, 30)
+        response = self.client.get(reverse("stats"))
+        self.assertContains(response, "Questa settimana")
+        self.assertContains(response, "piegamenti totali")
+        self.assertEqual(self.client.get(reverse("stats"), {"mese": "2020-02"}).status_code, 200)
+        self.assertEqual(self.client.get(reverse("stats"), {"mese": "boh"}).status_code, 200)
+        self.assertEqual(self.client.get(reverse("stats"), {"mese": "2099-01"}).status_code, 200)

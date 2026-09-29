@@ -9,7 +9,8 @@ from django.db import close_old_connections, transaction
 from pywebpush import WebPushException, webpush
 
 from .models import PushSubscription
-from .services import challenge_members, display_name
+from .services import display_name
+from .social import challenge_members, group_members
 
 logger = logging.getLogger(__name__)
 
@@ -77,4 +78,36 @@ def notify_progress(result):
     # Invia solo dopo il salvataggio definitivo, in un thread per non rallentare il tap
     transaction.on_commit(
         lambda: _send_in_background(recipients, title, body, tag=f"progress-{user.pk}")
+    )
+
+
+def _notify_later(users, title, body, url="/", tag=None):
+    if not push_enabled():
+        return
+    users = list(users)
+    if users:
+        transaction.on_commit(lambda: _send_in_background(users, title, body, url=url, tag=tag))
+
+
+def notify_friend_request(friendship):
+    name = display_name(friendship.from_user)
+    _notify_later(
+        [friendship.to_user], f"👋 {name} vuole sfidarti", "Accetta la richiesta di amicizia su COSTUEL.",
+        url="/amici/", tag=f"friend-{friendship.pk}",
+    )
+
+
+def notify_friend_accepted(friendship):
+    name = display_name(friendship.to_user)
+    _notify_later(
+        [friendship.from_user], f"🤝 {name} ha accettato", "Ora vedete i progressi l'uno dell'altro.",
+        url="/amici/", tag=f"friend-{friendship.pk}",
+    )
+
+
+def notify_group_join(group, user):
+    others = group_members(group).exclude(pk=user.pk)
+    _notify_later(
+        others, f"🙌 {display_name(user)} è entrato in {group.name}", "Un avversario in più in classifica!",
+        url=f"/gruppi/{group.pk}/", tag=f"group-{group.pk}",
     )

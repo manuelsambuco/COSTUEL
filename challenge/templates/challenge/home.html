@@ -1,5 +1,8 @@
 {% extends "challenge/base.html" %}
 
+{# I messaggi li mostra il pannello, che si aggiorna senza ricaricare la pagina #}
+{% block messages %}{% endblock %}
+
 {% block content %}
   <div id="board">
     {% include "challenge/_board.html" %}

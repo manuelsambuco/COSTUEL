@@ -1,0 +1,80 @@
+{% extends "challenge/base.html" %}
+
+{% block title %}Statistiche · COSTUEL{% endblock %}
+
+{% block content %}
+  <h1 class="page-title">Statistiche</h1>
+
+  <div class="tiles">
+    <div class="tile">
+      <span class="tile-value">🔥 {{ streak }}</span>
+      <span class="tile-label">giorn{{ streak|pluralize:"o,i" }} di fila</span>
+    </div>
+    <div class="tile">
+      <span class="tile-value">🏆 {{ best_streak }}</span>
+      <span class="tile-label">record</span>
+    </div>
+    <div class="tile">
+      <span class="tile-value">{{ lifetime }}</span>
+      <span class="tile-label">piegamenti totali</span>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2>Questa settimana</h2>
+    <p class="summary"><strong>{{ week_reps }}</strong> piegamenti · <strong>{{ week_done }}/{{ week_days }}</strong> giorni completati</p>
+    <ol class="week-chart">
+      {% for d in week %}
+        <li class="wc-day{% if d.completed %} done{% endif %}{% if d.is_today %} today{% endif %}{% if d.future %} future{% endif %}"
+            title="{{ d.day|date:'l j F' }}: {{ d.total }}/{{ d.goal }}">
+          <span class="wc-value">{% if not d.future %}{{ d.total }}{% endif %}</span>
+          <span class="wc-track"><span class="wc-bar" style="height: {{ d.percent }}%"></span></span>
+          <span class="wc-label">{{ d.label }}</span>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="card">
+    <div class="month-nav">
+      <a href="?mese={{ month.prev }}" class="month-arrow" aria-label="Mese precedente">‹</a>
+      <h2>{{ month.title }}</h2>
+      {% if month.next %}
+        <a href="?mese={{ month.next }}" class="month-arrow" aria-label="Mese successivo">›</a>
+      {% else %}
+        <span class="month-arrow disabled" aria-hidden="true">›</span>
+      {% endif %}
+    </div>
+    <p class="summary">
+      <strong>{{ month.reps }}</strong> piegamenti ·
+      <strong>{{ month.done }}/{{ month.days_elapsed }}</strong> giorni completati
+      {% if month.days_elapsed %}· <strong>{{ month.rate }}%</strong>{% endif %}
+    </p>
+    <table class="calendar">
+      <thead>
+        <tr>{% for w in month.weekdays %}<th scope="col">{{ w|slice:":1" }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for week in month.weeks %}
+          <tr>
+            {% for c in week %}
+              {% if c %}
+                <td class="cal-day{% if c.completed %} done{% elif c.total %} partial{% endif %}{% if c.is_today %} today{% endif %}{% if c.future %} future{% endif %}"
+                    style="--p: {{ c.percent }}"
+                    title="{{ c.day|date:'j F' }}: {{ c.total }} piegamenti">
+                  <span>{{ c.day.day }}</span>
+                </td>
+              {% else %}
+                <td></td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="legend muted small">
+      <span class="legend-dot done"></span> completato
+      <span class="legend-dot partial"></span> parziale
+    </p>
+  </section>
+{% endblock %}

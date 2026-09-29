@@ -1,0 +1,91 @@
+{% extends "challenge/base.html" %}
+
+{% block title %}Amici · COSTUEL{% endblock %}
+
+{% block content %}
+  <h1 class="page-title">Amici</h1>
+
+  {% if incoming %}
+    <section class="card highlight">
+      <h2>Richieste ricevute</h2>
+      <ul class="list">
+        {% for f in incoming %}
+          <li class="list-row">
+            <div>
+              <strong>{{ f.from_user.first_name|default:f.from_user.username }}</strong>
+              <small class="muted">@{{ f.from_user.username }}</small>
+            </div>
+            <div class="row-actions">
+              <form method="post" action="{% url 'friend_accept' f.pk %}">{% csrf_token %}
+                <button class="btn btn-small">Accetta</button>
+              </form>
+              <form method="post" action="{% url 'friend_decline' f.pk %}">{% csrf_token %}
+                <button class="link-btn">Rifiuta</button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <h2>Aggiungi un amico</h2>
+    <form method="post" action="{% url 'friend_request' %}" class="inline-form">
+      {% csrf_token %}
+      <input type="text" name="username" placeholder="Username dell'amico" autocapitalize="none"
+             autocomplete="off" required aria-label="Username dell'amico">
+      <button class="btn">Invia</button>
+    </form>
+    <p class="muted small">Il tuo username è <strong>@{{ user.username }}</strong>: dallo ai tuoi amici.</p>
+  </section>
+
+  <section class="card">
+    <h2>Classifica amici</h2>
+    {% if ranking %}
+      {% include "challenge/_ranking.html" %}
+    {% else %}
+      <p class="muted">Aggiungi almeno un amico per vedere la classifica.</p>
+    {% endif %}
+  </section>
+
+  {% if friends %}
+    <section class="card">
+      <h2>I tuoi amici ({{ friends|length }})</h2>
+      <ul class="list">
+        {% for f in friends %}
+          <li class="list-row">
+            <div>
+              <strong>{{ f.first_name|default:f.username }}</strong>
+              <small class="muted">@{{ f.username }}</small>
+            </div>
+            <form method="post" action="{% url 'friend_remove' f.pk %}"
+                  data-confirm="Rimuovere {{ f.first_name|default:f.username }} dagli amici?">
+              {% csrf_token %}
+              <button class="link-btn">Rimuovi</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if outgoing %}
+    <section class="card">
+      <h2>Richieste inviate</h2>
+      <ul class="list">
+        {% for f in outgoing %}
+          <li class="list-row">
+            <div>
+              <strong>{{ f.to_user.first_name|default:f.to_user.username }}</strong>
+              <small class="muted">in attesa</small>
+            </div>
+            <form method="post" action="{% url 'friend_decline' f.pk %}">{% csrf_token %}
+              <button class="link-btn">Annulla</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endblock %}

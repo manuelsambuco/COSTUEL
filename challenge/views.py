@@ -6,13 +6,15 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from . import services
 from .forms import SignupForm
-from .models import PushSubscription
+from .models import Group, PushSubscription
 from .push import notify_progress, push_enabled, send_to_users
+from .views_social import GROUP_INVITE_SESSION_KEY
 
 
 def _is_ajax(request):
@@ -83,16 +85,28 @@ def undo(request):
     return _board_response(request)
 
 
+def _safe_next(request):
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+    if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()},
+                                       require_https=request.is_secure()):
+        return next_url
+    return ""
+
+
 def signup(request):
     if request.user.is_authenticated:
         return redirect("home")
-    form = SignupForm(request.POST or None)
+    # Chi arriva dal link d'invito di un gruppo esistente non deve inserire il codice
+    invite = request.session.get(GROUP_INVITE_SESSION_KEY)
+    has_group_invite = bool(invite and Group.objects.filter(invite_code=invite).exists())
+    form = SignupForm(request.POST or None, require_code=not has_group_invite)
+    next_url = _safe_next(request)
     if request.method == "POST" and form.is_valid():
         user = form.save()
         services.get_profile(user)
         login(request, user)
-        return redirect("home")
-    return render(request, "registration/signup.html", {"form": form})
+        return redirect(next_url or "home")
+    return render(request, "registration/signup.html", {"form": form, "next": next_url})
 
 
 # --- Notifiche push ---
