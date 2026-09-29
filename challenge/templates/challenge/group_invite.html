@@ -6,7 +6,7 @@
   <section class="card auth center">
     <p class="muted">Sei stato invitato nel gruppo</p>
     <h1>{{ group.name }}</h1>
-    <p class="muted">{{ member_count }} membr{{ member_count|pluralize:"o,i" }} · 100 piegamenti al giorno 💪</p>
+    <p class="muted">{{ member_count }} membr{{ member_count|pluralize:"o,i" }} · {{ DEFAULT_DAILY_GOAL }} piegamenti al giorno 💪</p>
 
     {% if user.is_authenticated %}
       <form method="post">

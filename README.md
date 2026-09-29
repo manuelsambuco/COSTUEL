@@ -101,3 +101,54 @@ Apri l'app → *Attiva notifiche*.
 Su iPhone le notifiche web funzionano solo così.
 
 Usa il pulsante *Prova* per ricevere una notifica di test.
+
+## Gestione nel tempo
+
+### Dove stanno le cose
+
+| Cosa | Dove | Note |
+|---|---|---|
+| Codice | questa cartella + GitHub | GitHub è la copia di riferimento: Render pubblica da lì |
+| Dati veri (utenti, piegamenti, gruppi) | database Neon | né sul PC né su GitHub |
+| Chiavi segrete (`.env`) | solo sul PC | su Render ci sono le stesse, in *Environment* |
+| `db.sqlite3` | solo sul PC | database di prova locale, si può cancellare |
+
+### Fare una modifica
+
+```powershell
+python manage.py test challenge   # tutto verde?
+git add -A
+git commit -m "Descrizione della modifica"
+git push                          # Render ripubblica in 3-5 minuti
+```
+
+Se una modifica rompe qualcosa online: su Render → *Events* → *Rollback* alla versione precedente.
+
+### Cambiare l'obiettivo giornaliero
+
+Il comando si esegue dal PC ma agisce sul database online, passando la stringa di Neon:
+
+```powershell
+$env:DATABASE_URL="<stringa di Neon>"
+python manage.py set_goal 150                     # tutti, da oggi
+python manage.py set_goal 150 --da-domani         # tutti, da domani
+python manage.py set_goal 80 --utente luca        # solo un utente
+Remove-Item Env:DATABASE_URL
+```
+
+- I giorni passati mantengono l'obiettivo che avevano: statistiche e serie restano corrette.
+- Per i **nuovi iscritti** e per i testi dell'app ("150 piegamenti al giorno") imposta anche
+  `DEFAULT_DAILY_GOAL=150` su Render → *Environment*.
+- In alternativa, dal pannello `/admin` → *Profiles* puoi modificare l'obiettivo di ognuno.
+
+### Backup dei dati
+
+Neon gratis conserva la cronologia solo per 6 ore. Ogni tanto salva una copia:
+
+```powershell
+$env:DATABASE_URL="<stringa di Neon>"
+python manage.py dumpdata --natural-foreign --exclude contenttypes --exclude auth.permission --exclude sessions -o backup.json
+Remove-Item Env:DATABASE_URL
+```
+
+`backup.json` contiene dati personali (e le password cifrate): tienilo fuori da GitHub.

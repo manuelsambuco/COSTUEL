@@ -1,7 +1,7 @@
 {% load static %}{
   "name": "COSTUEL",
   "short_name": "COSTUEL",
-  "description": "Sfida dei 100 piegamenti al giorno con gli amici",
+  "description": "Sfida dei {{ DEFAULT_DAILY_GOAL }} piegamenti al giorno con gli amici",
   "lang": "it",
   "start_url": "/",
   "scope": "/",

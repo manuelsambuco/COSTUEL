@@ -4,7 +4,7 @@ from .social import incoming_requests
 
 
 def push(request):
-    return {"VAPID_PUBLIC_KEY": settings.VAPID_PUBLIC_KEY}
+    return {"VAPID_PUBLIC_KEY": settings.VAPID_PUBLIC_KEY, "DEFAULT_DAILY_GOAL": settings.DEFAULT_DAILY_GOAL}
 
 
 def navigation(request):

@@ -5,7 +5,7 @@
 {% block content %}
   <section class="card auth">
     <h1>Accedi</h1>
-    <p class="muted">100 piegamenti al giorno. Nessuna scusa.</p>
+    <p class="muted">{{ DEFAULT_DAILY_GOAL }} piegamenti al giorno. Nessuna scusa.</p>
     <form method="post" class="form">
       {% csrf_token %}
       {% if form.non_field_errors %}

@@ -509,3 +509,49 @@ class ProfileTests(TestCase):
 
     def test_topbar_links_to_profile(self):
         self.assertContains(self.client.get(reverse("home")), 'href="/profilo/"')
+
+
+class SetGoalCommandTests(TestCase):
+    def setUp(self):
+        self.a = User.objects.create_user("manuel", password="x")
+        self.b = User.objects.create_user("luca", password="x")
+        yesterday = timezone.localdate() - timedelta(days=1)
+        DailyLog.objects.create(user=self.a, day=yesterday, goal=100, total=100)
+        services.add_pushups(self.a, 90)  # oggi già iniziato
+
+    def run_cmd(self, *args):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        call_command("set_goal", *args, stdout=out)
+        return out.getvalue()
+
+    def test_everyone_from_today(self):
+        self.run_cmd("150")
+        self.assertEqual(services.get_profile(self.b).daily_goal, 150)
+        today = services.get_today_log(self.a)
+        self.assertEqual(today.goal, 150)
+        # si possono aggiungere altri piegamenti fino a 150
+        self.assertEqual(services.add_pushups(self.a, 30).log.total, 120)
+        # lo storico resta com'era
+        self.assertTrue(DailyLog.objects.get(user=self.a, day=timezone.localdate() - timedelta(days=1)).completed)
+
+    def test_single_user_from_tomorrow(self):
+        self.run_cmd("50", "--utente", "LUCA", "--da-domani")
+        self.assertEqual(services.get_profile(self.b).daily_goal, 50)
+        self.assertEqual(services.get_profile(self.a).daily_goal, 100)
+        self.assertEqual(services.get_today_log(self.a).goal, 100)
+
+    def test_errors(self):
+        from django.core.management.base import CommandError
+
+        with self.assertRaises(CommandError):
+            self.run_cmd("0")
+        with self.assertRaises(CommandError):
+            self.run_cmd("150", "--utente", "nessuno")
+
+    @override_settings(DEFAULT_DAILY_GOAL=150)
+    def test_texts_follow_default_goal(self):
+        self.assertContains(self.client.get(reverse("login")), "150 piegamenti al giorno")

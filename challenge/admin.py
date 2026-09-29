@@ -6,6 +6,7 @@ from .models import DailyLog, Friendship, Group, GroupMembership, Profile, PushS
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "daily_goal")
+    list_editable = ("daily_goal",)  # obiettivo modificabile direttamente dall'elenco
 
 
 class PushupEntryInline(admin.TabularInline):
