@@ -147,7 +147,37 @@ def run_backup(url):
     return output
 
 
+VENV_PYTHON = Path(r"C:\venvs\costuel\Scripts\python.exe")
+
+
+def ensure_project_python():
+    """Se Django non è installato in questo Python, riavvia lo script con quello del progetto.
+
+    Ritorna None se si può proseguire, altrimenti il codice di uscita.
+    """
+    try:
+        import django  # noqa: F401
+        return None
+    except ImportError:
+        pass
+    if VENV_PYTHON.exists() and Path(sys.executable).resolve() != VENV_PYTHON.resolve():
+        import subprocess
+
+        return subprocess.call([str(VENV_PYTHON), str(Path(__file__).resolve()), *sys.argv[1:]])
+    notify(
+        "Ambiente Python mancante",
+        "Django non è installato. Crea l'ambiente del progetto con:\n\n"
+        "python -m venv C:\\venvs\\costuel\n"
+        "C:\\venvs\\costuel\\Scripts\\pip install -r requirements.txt",
+        error=True,
+    )
+    return 1
+
+
 def main():
+    code = ensure_project_python()
+    if code is not None:
+        return code
     url = clean(os.environ.get(ENV_KEY)) or read_saved_url()
     from_saved = bool(url)
     remember = False
