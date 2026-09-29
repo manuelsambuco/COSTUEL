@@ -1,34 +1,18 @@
+/* Tema scuro sempre attivo, indipendentemente dalle impostazioni del telefono */
 :root {
-  --bg: #f4f3f7;
-  --surface: #ffffff;
-  --text: #16161d;
-  --muted: #6b6b7b;
-  --border: #e4e3ea;
-  --accent: #ff5a36;
-  --accent-press: #e2431f;
-  --accent-soft: #ffe7e0;
-  --success: #16a34a;
-  --success-soft: #dcfce7;
-  --track: #ecebf1;
+  --bg: #0f0f14;
+  --surface: #1b1b23;
+  --text: #f4f4f7;
+  --muted: #9a9aab;
+  --border: #2b2b36;
+  --accent: #ff6a47;
+  --accent-press: #ff8466;
+  --accent-soft: #3a1f19;
+  --success: #34d399;
+  --success-soft: #133326;
+  --track: #2a2a35;
   --radius: 18px;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f0f14;
-    --surface: #1b1b23;
-    --text: #f4f4f7;
-    --muted: #9a9aab;
-    --border: #2b2b36;
-    --accent: #ff6a47;
-    --accent-press: #ff8466;
-    --accent-soft: #3a1f19;
-    --success: #34d399;
-    --success-soft: #133326;
-    --track: #2a2a35;
-    color-scheme: dark;
-  }
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
