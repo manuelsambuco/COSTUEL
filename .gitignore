@@ -7,3 +7,4 @@ db.sqlite3
 staticfiles/
 .claude/
 backup*.json
+backups/

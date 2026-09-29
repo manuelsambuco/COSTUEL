@@ -143,12 +143,21 @@ Remove-Item Env:DATABASE_URL
 
 ### Backup dei dati
 
-Neon gratis conserva la cronologia solo per 6 ore. Ogni tanto salva una copia:
+Neon gratis conserva la cronologia solo per 6 ore. Ogni tanto (es. una volta a settimana) salva una copia:
 
 ```powershell
-$env:DATABASE_URL="<stringa di Neon>"
-python manage.py dumpdata --natural-foreign --exclude contenttypes --exclude auth.permission --exclude sessions -o backup.json
-Remove-Item Env:DATABASE_URL
+python backup.py
 ```
 
-`backup.json` contiene dati personali (e le password cifrate): tienilo fuori da GitHub.
+Ti chiede la stringa di connessione di Neon (incollala e premi Invio: non viene mostrata) e crea
+`backups/backup-AAAA-MM-GG_HHMM.json`. La cartella `backups/` non va su GitHub perché contiene dati
+personali (e le password cifrate), ma essendo sul Desktop viene salvata anche su OneDrive.
+
+Per ripristinare un backup in un database **vuoto** (es. un nuovo progetto Neon):
+
+```powershell
+$env:DATABASE_URL="<stringa del database vuoto>"
+python manage.py migrate
+python manage.py loaddata backups\backup-AAAA-MM-GG_HHMM.json
+Remove-Item Env:DATABASE_URL
+```
