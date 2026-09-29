@@ -10,10 +10,12 @@
   <div class="ring-wrap">
     <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
       <defs>
-        <linearGradient id="ring-gradient" x1="1" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#ff8a1f" />
-          <stop offset="55%" stop-color="#ff6b12" />
-          <stop offset="100%" stop-color="#d83800" />
+        {# Stessa sfumatura di --accent-gradient: chiaro in alto, scuro in basso.
+           L'SVG è ruotato di -90°, quindi il suo asse x punta verso l'alto: si va da x=1 (alto) a x=0 (basso). #}
+        <linearGradient id="ring-gradient" x1="1" y1="0" x2="0" y2="0">
+          <stop offset="0%" style="stop-color: var(--accent-light)" />
+          <stop offset="55%" style="stop-color: var(--accent)" />
+          <stop offset="100%" style="stop-color: var(--accent-deep)" />
         </linearGradient>
       </defs>
       <circle class="ring-track" cx="60" cy="60" r="52" />

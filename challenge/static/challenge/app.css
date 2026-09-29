@@ -1,4 +1,4 @@
-/* Tema scuro sempre attivo. Colori presi dal logo COSTUEL. */
+/* Tema scuro sempre attivo. Colori condivisi con il logo COSTUEL (logo.jfif). */
 :root {
   /* neri/grigi neutri del riquadro del logo */
   --bg: #0b0b0f;
@@ -15,7 +15,10 @@
   --accent-text: #ff8a3d;
   --accent-soft: #2b160a;
   --accent-glow: rgb(255 107 18 / 0.45);
+  /* Le due sole sfumature dell'app, come nel logo:
+     verticale come le cifre (chiaro in alto, scuro in basso), orizzontale come la barra */
   --accent-gradient: linear-gradient(180deg, var(--accent-light) 0%, var(--accent) 55%, var(--accent-deep) 100%);
+  --accent-gradient-x: linear-gradient(90deg, var(--accent-deep) 0%, var(--accent) 60%, var(--accent-light) 100%);
   --success: #34d399;
   --success-soft: #133326;
   --radius: 18px;
@@ -247,7 +250,7 @@ a { color: var(--accent-text); }
 .bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent-deep), var(--accent) 60%, var(--accent-light));
+  background: var(--accent-gradient-x);
   box-shadow: 0 0 8px var(--accent-glow);
   transition: width 0.5s ease;
 }
@@ -500,7 +503,7 @@ a.btn { display: inline-block; text-decoration: none; text-align: center; }
   right: 0;
   bottom: 0;
   border-radius: 10px;
-  background: linear-gradient(0deg, var(--accent-deep), var(--accent) 60%, var(--accent-light));
+  background: var(--accent-gradient);
   box-shadow: 0 0 10px var(--accent-glow);
 }
 .wc-day.done .wc-bar { background: var(--success); box-shadow: none; }
