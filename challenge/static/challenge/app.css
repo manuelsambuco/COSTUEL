@@ -67,6 +67,19 @@ a { color: var(--accent-text); }
   height: 36px;
 }
 .topbar-user { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; }
+.topbar-name {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  max-width: 45vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .container {
   max-width: 560px;

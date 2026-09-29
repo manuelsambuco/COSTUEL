@@ -10,6 +10,8 @@ urlpatterns = [
     path("add/", views.add, name="add"),
     path("undo/", views.undo, name="undo"),
     path("signup/", views.signup, name="signup"),
+    path("profilo/", views.profile, name="profile"),
+    path("profilo/password/", views.PasswordChangeView.as_view(), name="password_change"),
     # Amici
     path("amici/", social.friends, name="friends"),
     path("amici/richiesta/", social.friend_request, name="friend_request"),

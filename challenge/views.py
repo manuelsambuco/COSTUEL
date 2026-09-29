@@ -2,16 +2,19 @@ import json
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import get_user_model, login
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
+from django.contrib.messages.views import SuccessMessageMixin
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from . import services
-from .forms import SignupForm
+from .forms import ProfileForm, SignupForm
 from .models import Group, PushSubscription
 from .push import notify_progress, push_enabled, send_to_users
 from .views_social import GROUP_INVITE_SESSION_KEY
@@ -107,6 +110,25 @@ def signup(request):
         login(request, user)
         return redirect(next_url or "home")
     return render(request, "registration/signup.html", {"form": form, "next": next_url})
+
+
+@login_required
+def profile(request):
+    # Copia separata: se il form non è valido, request.user (mostrato in alto) resta com'era
+    form = ProfileForm(request.POST or None, instance=get_user_model().objects.get(pk=request.user.pk))
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Profilo aggiornato ✓")
+        return redirect("profile")
+    return render(request, "challenge/profile.html", {"form": form})
+
+
+class PasswordChangeView(SuccessMessageMixin, auth_views.PasswordChangeView):
+    """Cambio password: resti connesso anche dopo il cambio."""
+
+    template_name = "challenge/password_change.html"
+    success_url = reverse_lazy("profile")
+    success_message = "Password cambiata ✓"
 
 
 # --- Notifiche push ---

@@ -22,7 +22,7 @@
     {% if user.is_authenticated %}
       <form method="post" action="{% url 'logout' %}" class="topbar-user">
         {% csrf_token %}
-        <span class="muted">{{ user.first_name|default:user.username }}</span>
+        <a href="{% url 'profile' %}" class="topbar-name" title="Profilo">{{ user.first_name|default:user.username }}</a>
         <button type="submit" class="link-btn">Esci</button>
       </form>
     {% endif %}

@@ -449,3 +449,63 @@ class StatsTests(TestCase):
         self.assertEqual(self.client.get(reverse("stats"), {"mese": "2020-02"}).status_code, 200)
         self.assertEqual(self.client.get(reverse("stats"), {"mese": "boh"}).status_code, 200)
         self.assertEqual(self.client.get(reverse("stats"), {"mese": "2099-01"}).status_code, 200)
+
+
+class ProfileTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("manuel", password="Vecchia!Password1", first_name="Manuel")
+        self.friend = User.objects.create_user("luca", password="x")
+        make_friends(self.user, self.friend)
+        self.client.force_login(self.user)
+
+    def test_change_display_name_and_username(self):
+        response = self.client.post(reverse("profile"), {"first_name": "Manu", "username": "manu88"})
+        self.assertRedirects(response, reverse("profile"))
+        self.user.refresh_from_db()
+        self.assertEqual((self.user.first_name, self.user.username), ("Manu", "manu88"))
+        # amicizie e accesso con il nuovo username restano validi
+        self.assertTrue(social.are_friends(self.user, self.friend))
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manu88", password="Vecchia!Password1"))
+
+    def test_username_taken_case_insensitive(self):
+        response = self.client.post(reverse("profile"), {"first_name": "Altro", "username": "LUCA"})
+        self.assertContains(response, "già usato")
+        # in alto resta il nome salvato, non quello del form non valido
+        self.assertContains(response, 'title="Profilo">Manuel</a>')
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, "manuel")
+
+    def test_keep_same_username(self):
+        response = self.client.post(reverse("profile"), {"first_name": "Manuel S.", "username": "manuel"})
+        self.assertRedirects(response, reverse("profile"))
+
+    def test_invalid_username(self):
+        response = self.client.post(reverse("profile"), {"first_name": "", "username": "con spazi!"})
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, "manuel")
+
+    def test_change_password_keeps_session(self):
+        response = self.client.post(reverse("password_change"), {
+            "old_password": "Vecchia!Password1",
+            "new_password1": "Nuova!Password2",
+            "new_password2": "Nuova!Password2",
+        })
+        self.assertRedirects(response, reverse("profile"))
+        self.assertEqual(self.client.get(reverse("home")).status_code, 200)  # ancora connesso
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("Nuova!Password2"))
+
+    def test_wrong_old_password(self):
+        response = self.client.post(reverse("password_change"), {
+            "old_password": "sbagliata",
+            "new_password1": "Nuova!Password2",
+            "new_password2": "Nuova!Password2",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("Vecchia!Password1"))
+
+    def test_topbar_links_to_profile(self):
+        self.assertContains(self.client.get(reverse("home")), 'href="/profilo/"')

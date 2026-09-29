@@ -1,0 +1,36 @@
+{% extends "challenge/base.html" %}
+
+{% block title %}Profilo · COSTUEL{% endblock %}
+
+{% block content %}
+  <h1 class="page-title">Profilo</h1>
+
+  <section class="card">
+    <h2>I tuoi dati</h2>
+    <form method="post" class="form" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <label>{{ field.label }}
+          <input type="text" name="{{ field.html_name }}" value="{{ field.value|default:'' }}"
+                 maxlength="{% if field.name == 'username' %}150{% else %}30{% endif %}"
+                 {% if field.name == "username" %}autocapitalize="none" autocomplete="username" required{% endif %}>
+          {% if field.errors %}<span class="form-error">{{ field.errors|join:" " }}</span>{% endif %}
+          <small class="muted">{{ field.help_text }}</small>
+        </label>
+      {% endfor %}
+      <button type="submit" class="btn btn-block">Salva</button>
+    </form>
+    <p class="muted small">Se cambi username, usa quello nuovo per accedere. Amici, gruppi e
+      piegamenti restano tutti al loro posto.</p>
+  </section>
+
+  <section class="card">
+    <h2>Sicurezza</h2>
+    <a class="btn btn-ghost btn-block" href="{% url 'password_change' %}">Cambia password</a>
+  </section>
+
+  <form method="post" action="{% url 'logout' %}" class="danger-zone">
+    {% csrf_token %}
+    <button type="submit" class="link-btn">Esci dall'account</button>
+  </form>
+{% endblock %}

@@ -17,6 +17,8 @@ def navigation(request):
         section = "friends"
     elif name in ("groups", "group_detail", "group_invite"):
         section = "groups"
+    elif name in ("profile", "password_change"):
+        section = "profile"
     elif name == "stats":
         section = "stats"
     else:
