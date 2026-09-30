@@ -9,5 +9,6 @@
     <input type="number" name="goal" value="{{ value }}" min="{{ min_goal }}" max="{{ max_goal }}" step="1"
            inputmode="numeric" required>
   </label>
-  <small class="muted">Da {{ min_goal }} a {{ max_goal }}. La sfida base resta {{ default_goal }} per tutti; con un obiettivo più alto chi è nel gruppo può continuare fino a lì.</small>
+  {# Il limite (min_goal-max_goal) non si scrive: lo fanno rispettare il campo e il server se lo si supera #}
+  <small class="muted">Alzate l'asticella insieme: scegli con i tuoi amici quanti piegamenti fare al giorno!</small>
 </div>

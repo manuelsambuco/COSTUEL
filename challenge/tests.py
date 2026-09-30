@@ -737,6 +737,14 @@ class GroupGoalTests(TestCase):
         for n in (50, 100, 150, 200):
             self.assertIn(f'data-goal="{n}"', html)
         self.assertIn('min="1" max="1000"', html)
+        self.assertIn("Alzate l'asticella insieme", html)
+        self.assertNotIn("Da 1 a 1000", html)  # il limite non si mostra finché non lo si supera
+        for bad in ("5000", "tanti"):
+            response = self.client.post(reverse("group_create"), {"name": "Troppo", "goal": bad}, follow=True)
+            self.assertFalse(Group.objects.filter(name="Troppo").exists())
+        self.assertContains(response, "Obiettivo non valido")
+        response = self.client.post(reverse("group_create"), {"name": "Troppo", "goal": "5000"}, follow=True)
+        self.assertContains(response, "tra 1 e 1000")
 
     def test_admin_change_applies_from_tomorrow(self):
         with self.assertRaises(social.SocialError):
