@@ -69,6 +69,19 @@ a { color: var(--accent-text); }
   width: 36px;
   height: 36px;
 }
+/* Pallino sul nome: notifiche da attivare nel Profilo */
+.topbar-name.has-dot { position: relative; padding-right: 20px; }
+.topbar-name.has-dot::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
 .topbar-user { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; }
 .topbar-name {
   padding: 6px 12px;
@@ -255,6 +268,36 @@ a { color: var(--accent-text); }
   transition: width 0.5s ease;
 }
 .other.done .bar-fill { background: var(--success); box-shadow: none; }
+.other-pos { display: inline-block; min-width: 1.6em; color: var(--muted); font-weight: 800; }
+.other.is-me .other-name { color: var(--accent-light); }
+
+/* L'attributo hidden vince sempre (anche su righe con display: flex, es. la ricerca amici) */
+[hidden] { display: none !important; }
+
+/* Liste lunghe: prime righe + la tua, il resto con "Vedi tutti" */
+.collapsible:not(.expanded) > .is-more, .collapsible.expanded > .list-gap { display: none; }
+.list-gap { text-align: center; color: var(--muted); line-height: 0.5; margin: -4px 0; }
+.more-toggle { display: block; margin: 12px auto 0; color: var(--accent-light); font-weight: 600; text-decoration: none; }
+
+/* Riquadro richiudibile (I tuoi amici) */
+.fold > summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary h2 { margin: 0; }
+.fold > summary::after { content: "▾"; color: var(--muted); transition: transform 0.2s ease; }
+.fold[open] > summary::after { transform: rotate(180deg); }
+.fold[open] > summary { margin-bottom: 12px; }
+.search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  font: inherit;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.search:focus { outline: 2px solid var(--accent); border-color: transparent; }
 
 /* Notifiche */
 .push-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

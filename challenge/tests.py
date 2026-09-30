@@ -3,7 +3,9 @@ from datetime import date, timedelta
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -905,3 +907,85 @@ class PasswordRulesTests(TestCase):
             })
             self.assertEqual(response.status_code, 200, weak)
             self.assertFalse(User.objects.filter(username=f"u{len(weak)}").exists())
+
+
+class ManyFriendsTests(TestCase):
+    """Con tanti amici le liste restano corte: primi N + la tua riga, il resto a richiesta."""
+
+    def setUp(self):
+        self.me = User.objects.create_user("manuel", password="x", first_name="Manuel")
+        self.client.force_login(self.me)
+
+    def add_friends(self, n, start=0):
+        people = []
+        for i in range(start, start + n):
+            friend = User.objects.create_user(f"amico{i:02d}", password="x", first_name=f"Amico {i:02d}")
+            make_friends(self.me, friend)
+            people.append(friend)
+        return people
+
+    def test_today_board_ranks_me_among_the_others(self):
+        a, b = self.add_friends(2)
+        services.add_pushups(a, 80)
+        services.add_pushups(self.me, 50)
+        rows = services.today_board(self.me)
+        self.assertEqual([(r["name"], r["rank"], r["is_me"]) for r in rows],
+                         [("Amico 00", 1, False), ("Manuel", 2, True), ("Amico 01", 3, False)])
+
+    def test_today_board_queries_do_not_grow_with_friends(self):
+        self.add_friends(2)
+        services.today_board(self.me)  # crea i profili mancanti
+        with CaptureQueriesContext(connection) as few:
+            services.today_board(self.me)
+        self.add_friends(10, start=2)
+        services.today_board(self.me)
+        with CaptureQueriesContext(connection) as many:
+            services.today_board(self.me)
+        self.assertEqual(len(few), len(many))
+
+    def test_collapse_rows_keeps_top_and_me(self):
+        rows = [{"is_me": i == 7} for i in range(12)]
+        self.assertEqual(services.collapse_rows(rows, 5), 6)  # 12 - 5 in cima - la mia riga
+        self.assertEqual([i for i, r in enumerate(rows) if not r["more"]], [0, 1, 2, 3, 4, 7])
+        self.assertEqual([i for i, r in enumerate(rows) if r["gap"]], [7])
+        rows = [{"is_me": i == 5} for i in range(6)]
+        services.collapse_rows(rows, 5)
+        self.assertFalse(rows[5]["gap"])  # subito dopo i primi: niente separatore
+
+    def test_home_shows_top_five_and_my_row(self):
+        for i, friend in enumerate(self.add_friends(8)):
+            services.add_pushups(friend, 90 - i * 10)
+        services.add_pushups(self.me, 5)
+        html = self.client.get(reverse("home")).content.decode()
+        self.assertEqual(html.count('class="other is-more"'), 3)  # 8 amici - 5 in cima
+        self.assertIn('class="other is-me"', html)
+        self.assertIn('class="list-gap"', html)
+        self.assertIn("Vedi tutti (8)", html)
+
+    def test_home_with_few_friends_has_no_toggle(self):
+        self.add_friends(3)
+        html = self.client.get(reverse("home")).content.decode()
+        self.assertNotIn("Vedi tutti", html)
+        self.assertNotIn("is-more", html)
+
+    def test_home_alone_invites_to_add_friends(self):
+        self.assertContains(self.client.get(reverse("home")), "Sei ancora da solo")
+
+    def test_friends_page_ranking_and_folded_list(self):
+        self.add_friends(12)
+        html = self.client.get(reverse("friends")).content.decode()
+        self.assertIn("Mostra tutta la classifica (13)", html)
+        self.assertEqual(html.count("is-more"), 2)  # 13 in classifica: primi 10 + me (ultimo) visibili
+        self.assertIn('<details class="fold">', html)
+        self.assertIn('data-filter="friend-rows"', html)
+        self.assertIn('data-search="amico 03 amico03"', html)
+
+    def test_small_friend_list_has_no_search(self):
+        self.add_friends(2)
+        html = self.client.get(reverse("friends")).content.decode()
+        self.assertNotIn('data-filter="friend-rows"', html)
+        self.assertNotIn("Mostra tutta la classifica", html)
+
+    def test_notification_card_lives_in_the_profile(self):
+        self.assertNotContains(self.client.get(reverse("home")), 'id="push-card"')
+        self.assertContains(self.client.get(reverse("profile")), 'id="push-card"')

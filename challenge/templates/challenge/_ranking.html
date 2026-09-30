@@ -1,4 +1,4 @@
-{# Classifica con i tab Oggi / Settimana / Mese. Richiede: tabs, period, ranking #}
+{# Classifica con i tab Oggi / Settimana / Mese. Richiede: tabs, period, ranking, ranking_hidden #}
 <nav class="segmented" aria-label="Periodo">
   {% for tab in tabs %}
     <a href="?periodo={{ tab.key }}" class="segment{% if tab.active %} active{% endif %}"{% if tab.active %} aria-current="true"{% endif %}>{{ tab.label }}</a>
@@ -8,9 +8,10 @@
   <p class="muted period-label">{{ period.label }} · {{ period.days_elapsed }} di {{ period.days_total }} giorni</p>
 {% endif %}
 
-<ol class="ranking">
+<ol class="ranking collapsible" id="ranking-list">
   {% for r in ranking %}
-    <li class="rank-row{% if r.is_me %} is-me{% endif %}{% if r.completed %} done{% endif %}">
+    {% if r.gap %}<li class="list-gap" aria-hidden="true">⋮</li>{% endif %}
+    <li class="rank-row{% if r.is_me %} is-me{% endif %}{% if r.completed %} done{% endif %}{% if r.more %} is-more{% endif %}">
       <span class="rank-pos">
         {% if r.reps and r.rank == 1 %}🥇{% elif r.reps and r.rank == 2 %}🥈{% elif r.reps and r.rank == 3 %}🥉{% else %}{{ r.rank }}{% endif %}
       </span>
@@ -31,3 +32,8 @@
     </li>
   {% endfor %}
 </ol>
+{% if ranking_hidden %}
+  <button type="button" class="link-btn more-toggle" data-more="ranking-list" aria-expanded="false"
+          aria-controls="ranking-list" data-label-more="Mostra tutta la classifica ({{ ranking|length }})"
+          data-label-less="Mostra meno">Mostra tutta la classifica ({{ ranking|length }})</button>
+{% endif %}

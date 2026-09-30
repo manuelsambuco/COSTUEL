@@ -92,18 +92,25 @@
 
 <section class="card">
   <h2>Amici e gruppi oggi</h2>
-  {% if others %}
-    <ul class="others">
+  {% if others_count %}
+    {# I primi 5 più la tua riga; gli altri compaiono con "Vedi tutti" #}
+    <ol class="others collapsible" id="others-list">
       {% for o in others %}
-        <li class="other{% if o.completed %} done{% endif %}">
+        {% if o.gap %}<li class="list-gap" aria-hidden="true">⋮</li>{% endif %}
+        <li class="other{% if o.completed %} done{% endif %}{% if o.is_me %} is-me{% endif %}{% if o.more %} is-more{% endif %}">
           <div class="other-head">
-            <span class="other-name">{{ o.name }}{% if o.completed %} 🏆{% endif %}</span>
+            <span class="other-name"><span class="other-pos">{{ o.rank }}</span>{% if o.is_me %}Tu{% else %}{{ o.name }}{% endif %}{% if o.completed %} 🏆{% endif %}</span>
             <span class="other-count">{{ o.total }}/{{ o.goal }}{% if o.extra %} <span class="extra">+{{ o.extra }}</span>{% endif %}</span>
           </div>
           <div class="bar"><div class="bar-fill" style="width: {{ o.percent }}%"></div></div>
         </li>
       {% endfor %}
-    </ul>
+    </ol>
+    {% if others_hidden %}
+      <button type="button" class="link-btn more-toggle" data-more="others-list" aria-expanded="false"
+              aria-controls="others-list" data-label-more="Vedi tutti ({{ others_count }})"
+              data-label-less="Mostra meno">Vedi tutti ({{ others_count }})</button>
+    {% endif %}
   {% else %}
     <p class="muted">Sei ancora da solo in questa sfida.</p>
     <div class="empty-actions">

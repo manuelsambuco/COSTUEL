@@ -24,8 +24,12 @@ def _is_ajax(request):
     return request.headers.get("X-Requested-With") == "fetch"
 
 
+HOME_TOP = 5  # nella home: i primi 5 di oggi più la tua posizione; il resto con "Vedi tutti"
+
+
 def _board_context(request):
     user = request.user
+    others = services.today_board(user)
     log = services.get_today_log(user)
     group_goals = social.user_group_goals(user)
     cap = services.daily_cap(log, group_goals)
@@ -37,7 +41,9 @@ def _board_context(request):
         "group_bars": services.group_progress(log, group_goals),
         "entries": log.entries.all()[:10],
         "buttons": settings.QUICK_ADD_BUTTONS,
-        "others": services.today_board(user),
+        "others": others,
+        "others_count": len(others) - 1,  # tu escluso
+        "others_hidden": services.collapse_rows(others, HOME_TOP),
         "week": services.last_days(user, 7),
     }
 

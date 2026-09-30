@@ -116,29 +116,45 @@ def undo_last(user):
 
 
 def today_board(user):
-    """Progressi di oggi di amici e membri dei gruppi dell'utente."""
-    others = list(challenge_members(user))
-    logs = {
-        log.user_id: log
-        for log in DailyLog.objects.filter(day=timezone.localdate(), user__in=[user, *others])
-    }
+    """Classifica di oggi tra te, i tuoi amici e i membri dei tuoi gruppi (tu compreso)."""
+    people = [user, *challenge_members(user)]
+    ids = [p.pk for p in people]
+    logs = {log.user_id: log for log in DailyLog.objects.filter(day=timezone.localdate(), user__in=ids)}
+    # una sola query per gli obiettivi di chi oggi non ha ancora iniziato
+    base_goals = dict(Profile.objects.filter(user__in=ids).values_list("user_id", "daily_goal"))
     rows = []
-    for other in others:
-        log = logs.get(other.pk)
-        goal = log.goal if log else get_profile(other).daily_goal
+    for person in people:
+        log = logs.get(person.pk)
+        goal = log.goal if log else (base_goals.get(person.pk) or get_profile(person).daily_goal)
         total = log.total if log else 0
         counted = min(total, goal)  # qui tutti sono misurati sulla sfida base...
         rows.append({
-            "name": display_name(other),
+            "name": display_name(person),
+            "is_me": person.pk == user.pk,
             "total": counted,
             "extra": max(total - goal, 0),  # ...e quello in più è un badge "+50"
             "goal": goal,
             "percent": min(round(counted * 100 / goal), 100) if goal else 100,
             "completed": total >= goal,
         })
-    # Chi ha fatto di più in cima
-    rows.sort(key=lambda r: (-r["percent"], r["name"].lower()))
+    # Chi ha fatto di più in cima; stessa percentuale = stessa posizione
+    rows.sort(key=lambda r: (-r["percent"], not r["is_me"], r["name"].lower()))
+    for i, row in enumerate(rows):
+        row["rank"] = rows[i - 1]["rank"] if i and rows[i - 1]["percent"] == row["percent"] else i + 1
     return rows
+
+
+def collapse_rows(rows, limit):
+    """Liste lunghe: restano visibili le prime ``limit`` righe e la tua; le altre si aprono a richiesta.
+
+    Imposta ``more`` (riga nascosta finché non si apre la lista) e ``gap`` (separatore prima
+    della tua riga quando sei più in basso). Restituisce quante righe sono nascoste.
+    """
+    for i, row in enumerate(rows):
+        me = bool(row.get("is_me"))
+        row["more"] = i >= limit and not me
+        row["gap"] = i > limit and me
+    return sum(row["more"] for row in rows)
 
 
 def last_days(user, days=7):

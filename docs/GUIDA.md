@@ -94,13 +94,14 @@ Ogni `git push` successivo ripubblica l'app in automatico.
 ## Installare l'app sul telefono e attivare le notifiche
 
 **Android (Chrome):** apri il sito → menu ⋮ → *Installa app* (o *Aggiungi a schermata Home*).
-Apri l'app → *Attiva notifiche*.
+Apri l'app → tocca il tuo nome in alto (Profilo) → *Attiva notifiche*.
 
 **iPhone (iOS 16.4 o successivo):** apri il sito **in Safari** → pulsante *Condividi* →
-*Aggiungi alla schermata Home*. Apri l'app **dall'icona** (non da Safari) → *Attiva notifiche*.
+*Aggiungi alla schermata Home*. Apri l'app **dall'icona** (non da Safari) → Profilo → *Attiva notifiche*.
 Su iPhone le notifiche web funzionano solo così.
 
-Usa il pulsante *Prova* per ricevere una notifica di test.
+Usa il pulsante *Prova* per ricevere una notifica di test. Finché le notifiche non sono attive,
+un pallino arancione sul tuo nome in alto lo ricorda.
 
 ## Gestione nel tempo
 

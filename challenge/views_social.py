@@ -9,12 +9,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from . import social, stats
+from . import services, social, stats
 from .models import DailyLog, Group, GroupMembership
 from .push import notify_friend_accepted, notify_friend_request, notify_group_join
 from .services import display_name
 
 GROUP_INVITE_SESSION_KEY = "group_invite"
+RANKING_TOP = 10  # classifiche: i primi 10 più la tua posizione; il resto con "Mostra tutta la classifica"
 GOAL_CHOICES = (50, 100, 150, 200)  # scorciatoie nel form; si può scrivere qualsiasi numero da 1 a 1000
 
 
@@ -24,6 +25,11 @@ def _period(request):
 
 def _period_tabs(period):
     return [{"key": key, "label": label, "active": key == period.key} for key, label in stats.PERIODS]
+
+
+def _ranking(users, period, me, goals_by_day=None):
+    rows = stats.leaderboard(users, period, me=me, goals_by_day=goals_by_day)
+    return rows, services.collapse_rows(rows, RANKING_TOP)
 
 
 def _run(request, action, *args, success=None):
@@ -46,10 +52,12 @@ def friends(request):
     user = request.user
     period = _period(request)
     friend_list = list(social.friends_of(user).order_by("first_name", "username"))
+    ranking, ranking_hidden = _ranking([user, *friend_list], period, user) if friend_list else ([], 0)
     return render(request, "challenge/friends.html", {
         "period": period,
         "tabs": _period_tabs(period),
-        "ranking": stats.leaderboard([user, *friend_list], period, me=user) if friend_list else [],
+        "ranking": ranking,
+        "ranking_hidden": ranking_hidden,
         "friends": friend_list,
         "incoming": social.incoming_requests(user),
         "outgoing": social.outgoing_requests(user),
@@ -164,6 +172,7 @@ def group_detail(request, pk):
     goal_today = goals_by_day.get(period.today) or social.group_goal_on(group)
     my_log = DailyLog.objects.filter(user=request.user, day=period.today).first()
     my_total = min(my_log.total if my_log else 0, goal_today)
+    ranking, ranking_hidden = _ranking(members, period, request.user, goals_by_day)
     return render(request, "challenge/group_detail.html", {
         "group": group,
         "is_admin": membership.is_admin,
@@ -179,7 +188,8 @@ def group_detail(request, pk):
         "default_goal": settings.DEFAULT_DAILY_GOAL,
         "period": period,
         "tabs": _period_tabs(period),
-        "ranking": stats.leaderboard(members, period, me=request.user, goals_by_day=goals_by_day),
+        "ranking": ranking,
+        "ranking_hidden": ranking_hidden,
         "members": [{"user": m, "is_admin": m.pk in admins} for m in members],
         "invite_url": request.build_absolute_uri(reverse("group_invite", args=[group.invite_code])),
     })

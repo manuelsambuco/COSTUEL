@@ -51,22 +51,30 @@
 
   {% if friends %}
     <section class="card">
-      <h2>I tuoi amici ({{ friends|length }})</h2>
-      <ul class="list">
-        {% for f in friends %}
-          <li class="list-row">
-            <div>
-              <strong>{{ f.first_name|default:f.username }}</strong>
-              <small class="muted">@{{ f.username }}</small>
-            </div>
-            <form method="post" action="{% url 'friend_remove' f.pk %}"
-                  data-confirm="Rimuovere {{ f.first_name|default:f.username }} dagli amici?">
-              {% csrf_token %}
-              <button class="link-btn">Rimuovi</button>
-            </form>
-          </li>
-        {% endfor %}
-      </ul>
+      {# Chiusa di default: con tanti amici la pagina resta corta #}
+      <details class="fold">
+        <summary><h2>I tuoi amici ({{ friends|length }})</h2></summary>
+        {% if friends|length > 5 %}
+          <input type="search" class="search" data-filter="friend-rows" placeholder="Cerca un amico"
+                 aria-label="Cerca un amico" autocapitalize="none" autocomplete="off">
+        {% endif %}
+        <ul class="list" id="friend-rows">
+          {% for f in friends %}
+            <li class="list-row" data-search="{{ f.first_name|lower }} {{ f.username|lower }}">
+              <div>
+                <strong>{{ f.first_name|default:f.username }}</strong>
+                <small class="muted">@{{ f.username }}</small>
+              </div>
+              <form method="post" action="{% url 'friend_remove' f.pk %}"
+                    data-confirm="Rimuovere {{ f.first_name|default:f.username }} dagli amici?">
+                {% csrf_token %}
+                <button class="link-btn">Rimuovi</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+        <p class="muted small" data-filter-empty="friend-rows" hidden>Nessun amico trovato.</p>
+      </details>
     </section>
   {% endif %}
 

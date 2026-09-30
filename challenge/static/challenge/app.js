@@ -25,6 +25,41 @@
     picker.querySelectorAll("[data-goal]").forEach((c) => c.classList.toggle("active", c.dataset.goal === event.target.value));
   });
 
+  // --- Liste lunghe: "Vedi tutti" / "Mostra meno" (le righe in più hanno la classe is-more) ---
+  const expanded = new Set();  // liste aperte: restano aperte anche quando il pannello si aggiorna
+
+  function setExpanded(button, open) {
+    const list = document.getElementById(button.dataset.more);
+    if (!list) return;
+    list.classList.toggle("expanded", open);
+    button.setAttribute("aria-expanded", String(open));
+    button.textContent = open ? button.dataset.labelLess : button.dataset.labelMore;
+  }
+  function restoreExpanded(root) {
+    root.querySelectorAll("[data-more]").forEach((b) => setExpanded(b, expanded.has(b.dataset.more)));
+  }
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-more]");
+    if (!button) return;
+    const id = button.dataset.more;
+    if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+    setExpanded(button, expanded.has(id));
+  });
+
+  // --- Ricerca nelle liste (es. i tuoi amici) ---
+  document.addEventListener("input", (event) => {
+    const listId = event.target.dataset && event.target.dataset.filter;
+    if (!listId) return;
+    const query = event.target.value.trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll(`#${listId} > [data-search]`).forEach((row) => {
+      row.hidden = !row.dataset.search.includes(query);
+      if (!row.hidden) shown += 1;
+    });
+    const empty = document.querySelector(`[data-filter-empty="${listId}"]`);
+    if (empty) empty.hidden = shown > 0;
+  });
+
   // --- Condividi / copia il link d'invito ---
   document.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-share]");
@@ -54,6 +89,7 @@
   async function refreshBoard(response) {
     const html = await response.text();
     board.innerHTML = html;
+    restoreExpanded(board);
   }
 
   document.addEventListener("submit", async (event) => {
@@ -109,7 +145,9 @@
 
   // --- PWA e notifiche push ---
 
+  // Il riquadro sta nella pagina Profilo; altrove un pallino sul nome ricorda di attivarle
   const card = document.getElementById("push-card");
+  const profileLink = document.querySelector(".topbar-name");
   const els = {
     title: document.getElementById("push-title"),
     desc: document.getElementById("push-desc"),
@@ -131,7 +169,11 @@
       .catch((err) => console.warn("Service worker non registrato", err));
   }
 
-  function show(title, desc, buttons = []) {
+  function show(title, desc, buttons = [], remind = false) {
+    if (profileLink) {
+      profileLink.classList.toggle("has-dot", remind);
+      profileLink.title = remind ? "Profilo · attiva le notifiche" : "Profilo";
+    }
     if (!card) return;
     card.hidden = false;
     els.title.textContent = title;
@@ -140,11 +182,10 @@
   }
 
   async function updatePushCard() {
-    if (!card) return;
     if (!pushSupported) {
       if (isIOS && !isStandalone) {
         show("Installa l'app per le notifiche",
-          "Su iPhone: tocca Condividi → \"Aggiungi alla schermata Home\", poi apri COSTUEL dall'icona.");
+          "Su iPhone: tocca Condividi → \"Aggiungi alla schermata Home\", poi apri COSTUEL dall'icona.", [], true);
       } else {
         show("Notifiche non disponibili", "Questo browser non supporta le notifiche push. Prova con Chrome o Safari.");
       }
@@ -161,10 +202,10 @@
     const sub = registration && await registration.pushManager.getSubscription();
     if (sub && Notification.permission === "granted") {
       // Ri-sincronizza col server (es. dopo un cambio di dispositivo o database)
-      postJSON(cfg.urls.subscribe, sub.toJSON()).catch(() => {});
+      if (card || board) postJSON(cfg.urls.subscribe, sub.toJSON()).catch(() => {});
       show("Notifiche attive ✓", "Ti avviseremo quando gli altri fanno piegamenti.", ["test", "disable"]);
     } else {
-      show("Attiva le notifiche", "Ricevi un avviso ogni volta che qualcuno registra una serie.", ["enable"]);
+      show("Attiva le notifiche", "Ricevi un avviso ogni volta che qualcuno registra una serie.", ["enable"], true);
     }
   }
 
