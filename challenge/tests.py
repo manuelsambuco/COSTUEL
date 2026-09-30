@@ -555,3 +555,40 @@ class SetGoalCommandTests(TestCase):
     @override_settings(DEFAULT_DAILY_GOAL=150)
     def test_texts_follow_default_goal(self):
         self.assertContains(self.client.get(reverse("login")), "150 piegamenti al giorno")
+
+
+class ExportAnalysisDataTests(TestCase):
+    def test_export_is_pseudonymized_and_complete(self):
+        import csv
+        import tempfile
+        from io import StringIO
+        from pathlib import Path
+
+        from django.core.management import call_command
+
+        a = User.objects.create_user("manuel", password="x", first_name="Manuel")
+        b = User.objects.create_user("luca", password="x")
+        c = User.objects.create_user("giulia", password="x")
+        make_friends(a, b)
+        group = social.create_group(a, "Palestra")
+        social.join_group(c, group.invite_code)
+        services.add_pushups(a, 30)
+        services.add_pushups(a, 25)
+        services.add_pushups(b, 20)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            call_command("export_analysis_data", out=tmp, stdout=StringIO())
+            read = lambda name: list(csv.DictReader(open(Path(tmp) / f"{name}.csv", encoding="utf-8")))  # noqa: E731
+            users, edges, entries, daily = read("users"), read("edges"), read("entries"), read("daily")
+            raw = "".join((Path(tmp) / f"{n}.csv").read_text(encoding="utf-8") for n in ("users", "edges", "entries", "daily"))
+
+        self.assertEqual(len(users), 3)
+        self.assertNotIn("manuel", raw.lower())  # no usernames or names anywhere
+        self.assertNotIn("Manuel", raw)
+        # a<->b friends, a<->c same group: 4 directed edges
+        self.assertEqual(len(edges), 4)
+        self.assertEqual(len(entries), 3)
+        self.assertEqual(sorted(int(e["reps"]) for e in entries), [20, 25, 30])
+        self.assertEqual(sorted(int(d["total"]) for d in daily), [20, 55])
+        ids = {u["user_id"] for u in users}
+        self.assertTrue(all(e["user_id"] in ids and e["friend_id"] in ids for e in edges))

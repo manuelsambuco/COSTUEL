@@ -12,6 +12,11 @@ condivisibile (chi apre il link si registra senza codice), classifiche oggi/sett
 amici e gruppi, statistiche personali (giorni di fila, record, grafico settimanale, calendario
 mensile), barra di navigazione in basso. Vedi e ricevi notifiche solo da amici e membri dei tuoi gruppi.
 
+**Data science:** nella cartella [`analysis/`](analysis/README.md) c'è l'analisi dei dati dell'app
+(in inglese): simulatore con verità nota, analisi di sopravvivenza delle serie di giorni, modello
+predittivo "finirà oggi?" ed effetto causale delle notifiche con un esperimento randomizzato.
+I dati veri si esportano pseudonimizzati con `python manage.py export_analysis_data`.
+
 ## Struttura
 
 ```
