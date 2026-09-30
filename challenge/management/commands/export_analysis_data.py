@@ -3,7 +3,7 @@
     python manage.py export_analysis_data                  # -> analysis/data/real/
     python manage.py export_analysis_data --out altra/cartella
 
-Stesso formato del simulatore (users, edges, entries, daily): i notebook girano uguali.
+Stesso formato del simulatore (users, edges, entries, daily, notifications): i notebook girano uguali.
 Niente nomi né username: ogni utente diventa un codice derivato da SECRET_KEY, stabile tra
 un'esportazione e l'altra ma non riconducibile alla persona senza la chiave.
 I file contengono comunque dati personali: la cartella è esclusa da git.
@@ -20,7 +20,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from challenge.models import DailyLog, Friendship, GroupMembership, PushupEntry
+from challenge.models import DailyLog, Friendship, GroupMembership, NotificationEvent, PushupEntry
 
 
 def pseudonym(user_id: int) -> str:
@@ -70,7 +70,15 @@ class Command(BaseCommand):
                 [ids[d.user_id], d.day.isoformat(), d.total, d.goal]
                 for d in DailyLog.objects.filter(user_id__in=users).order_by("day", "user_id")
             ]),
+            # Decisioni dell'esperimento: una riga per notifica, consegnata o trattenuta a caso
+            "notifications": write("notifications", [
+                "sender_id", "recipient_id", "ts", "delivered", "kind", "devices", "delivery_prob",
+            ], [
+                [ids[n.sender_id], ids[n.recipient_id],
+                 timezone.localtime(n.created_at).replace(tzinfo=None).isoformat(sep=" "),
+                 n.delivered, n.kind, n.devices, n.delivery_prob]
+                for n in NotificationEvent.objects.filter(sender_id__in=users, recipient_id__in=users).order_by("created_at")
+            ]),
         }
         summary = ", ".join(f"{n} {name}" for name, n in counts.items())
         self.stdout.write(self.style.SUCCESS(f"Esportati in {out}: {summary}."))
-        self.stdout.write("Le notifiche non vengono ancora registrate dall'app: il notebook 04 per ora gira solo sui dati simulati.")

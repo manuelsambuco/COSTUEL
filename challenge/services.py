@@ -38,6 +38,7 @@ class AddResult:
     requested: int
     added: int  # quanti sono stati davvero contati
     just_completed: bool  # questa serie ha fatto raggiungere l'obiettivo
+    entry: PushupEntry | None = None  # la serie salvata (None se non è stato contato nulla)
 
 
 def add_pushups(user, reps):
@@ -50,11 +51,14 @@ def add_pushups(user, reps):
         # Blocca la riga: due tap veloci non possono superare l'obiettivo
         log = DailyLog.objects.select_for_update().get(pk=log.pk)
         added = min(reps, log.remaining)
+        entry = None
         if added:
-            PushupEntry.objects.create(log=log, reps=added)
+            entry = PushupEntry.objects.create(log=log, reps=added)
             log.total += added
             log.save(update_fields=["total"])
-    return AddResult(log=log, requested=reps, added=added, just_completed=added > 0 and log.completed)
+    return AddResult(
+        log=log, requested=reps, added=added, just_completed=added > 0 and log.completed, entry=entry
+    )
 
 
 def undo_last(user):

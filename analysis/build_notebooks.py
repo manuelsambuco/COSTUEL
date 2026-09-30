@@ -638,8 +638,9 @@ pd.DataFrame(rows).set_index("days")
 4. **Throttle.** The first notification of the hour carries most of the value; later ones add
    little and cost attention. A per-recipient cap (e.g. one friend notification per hour) is the
    obvious product change - and it should itself be tested.
-5. **Log the decision.** The app must store each notification with its `delivered` flag (today it
-   only sends them). Then this notebook runs unchanged on real data (`export_analysis_data`).
+5. **Log the decision.** Done: the app now delivers each friend notification with probability
+   `NOTIFY_DELIVERY_PROB` (default 80%) and stores every decision (`NotificationEvent`), so this
+   notebook runs unchanged on the real export (`export_analysis_data`).
 """),
 ]
 

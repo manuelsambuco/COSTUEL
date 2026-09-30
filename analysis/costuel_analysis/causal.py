@@ -183,6 +183,10 @@ def notification_outcomes(
         n.loc[idx, "sets_next"] = np.searchsorted(times, t + window, side="right") - np.searchsorted(times, t, side="right")
     n["goal"] = goal.reindex(pd.MultiIndex.from_arrays([n["recipient_id"], n["day"]])).fillna(100).to_numpy()
     n["available"] = n["reps_before"] < n["goal"]
+    if "devices" in n.columns:
+        # Real data: without a subscribed device a notification could not arrive either way.
+        # Known before the draw, so excluding these keeps the comparison randomized.
+        n["available"] &= n["devices"] > 0
     n["hour"] = n["ts"].dt.hour
     # other notifications the recipient got in the previous window (decided before this one)
     n = n.sort_values(["recipient_id", "ts"]).reset_index(drop=True)

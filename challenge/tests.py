@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from . import push, services, social, stats
-from .models import DailyLog, Friendship, Group, GroupMembership, PushSubscription
+from .models import DailyLog, Friendship, Group, GroupMembership, NotificationEvent, PushSubscription
 
 User = get_user_model()
 
@@ -158,7 +158,7 @@ class SignupTests(TestCase):
         self.assertEqual(User.objects.get(username="luca").profile.daily_goal, 100)
 
 
-@override_settings(VAPID_PUBLIC_KEY="pub", VAPID_PRIVATE_KEY="priv")
+@override_settings(VAPID_PUBLIC_KEY="pub", VAPID_PRIVATE_KEY="priv", NOTIFY_DELIVERY_PROB=1.0)
 class NotificationTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("manuel", password="x", first_name="Manuel")
@@ -592,3 +592,85 @@ class ExportAnalysisDataTests(TestCase):
         self.assertEqual(sorted(int(d["total"]) for d in daily), [20, 55])
         ids = {u["user_id"] for u in users}
         self.assertTrue(all(e["user_id"] in ids and e["friend_id"] in ids for e in edges))
+
+
+@override_settings(VAPID_PUBLIC_KEY="pub", VAPID_PRIVATE_KEY="priv", NOTIFY_DELIVERY_PROB=0.8)
+class NotificationExperimentTests(TestCase):
+    """Ogni notifica di progresso viene registrata, consegnata o trattenuta a caso."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("manuel", password="x")
+        self.luca = User.objects.create_user("luca", password="x")
+        self.giulia = User.objects.create_user("giulia", password="x")
+        self.stranger = User.objects.create_user("marco", password="x")
+        make_friends(self.user, self.luca)
+        make_friends(self.user, self.giulia)
+        for u, name in ((self.luca, "luca-1"), (self.luca, "luca-2"), (self.giulia, "giulia")):
+            PushSubscription.objects.create(user=u, endpoint=f"https://push.example/{name}", p256dh="k", auth="a")
+        self.client.force_login(self.user)
+
+    def _post(self, reps, draws):
+        """Registra una serie con estrazioni fissate (una per destinatario, in ordine di username)."""
+        with mock.patch("challenge.push.webpush") as webpush, \
+             mock.patch("challenge.push._send_in_background", new=push.send_to_users), \
+             mock.patch("challenge.push.draw_delivery", side_effect=draws):
+            with self.captureOnCommitCallbacks(execute=True):
+                self.client.post(reverse("add"), {"reps": reps})
+        return webpush
+
+    def test_every_decision_is_logged_and_only_delivered_ones_are_sent(self):
+        webpush = self._post(25, draws=[False, True])  # giulia trattenuta, luca consegnata
+        events = {e.recipient.username: e for e in NotificationEvent.objects.all()}
+        self.assertEqual(set(events), {"giulia", "luca"})  # lo sconosciuto non c'è
+        self.assertFalse(events["giulia"].delivered)
+        self.assertTrue(events["luca"].delivered)
+        self.assertEqual(events["luca"].devices, 2)
+        self.assertEqual(events["luca"].delivery_prob, 0.8)
+        self.assertEqual(events["luca"].kind, NotificationEvent.PROGRESS)
+        self.assertEqual(events["luca"].entry.reps, 25)
+        endpoints = sorted(c.kwargs["subscription_info"]["endpoint"] for c in webpush.call_args_list)
+        self.assertEqual(endpoints, ["https://push.example/luca-1", "https://push.example/luca-2"])
+
+    def test_withheld_notifications_send_nothing(self):
+        webpush = self._post(25, draws=[False, False])
+        webpush.assert_not_called()
+        self.assertEqual(NotificationEvent.objects.filter(delivered=False).count(), 2)
+
+    def test_completion_is_logged_with_its_kind(self):
+        services.add_pushups(self.user, 90)
+        self._post(10, draws=[True, True])
+        self.assertTrue(NotificationEvent.objects.filter(kind=NotificationEvent.COMPLETED).exists())
+
+    def test_draw_uses_the_configured_probability(self):
+        share = sum(push.draw_delivery(0.8) for _ in range(4000)) / 4000
+        self.assertTrue(0.77 < share < 0.83)
+        self.assertFalse(any(push.draw_delivery(0.0) for _ in range(100)))
+        self.assertTrue(all(push.draw_delivery(1.0) for _ in range(100)))
+
+    def test_undo_keeps_the_experiment_record(self):
+        self._post(25, draws=[True, True])
+        self.client.post(reverse("undo"))
+        self.assertEqual(NotificationEvent.objects.count(), 2)
+        self.assertIsNone(NotificationEvent.objects.first().entry)
+
+    @override_settings(VAPID_PUBLIC_KEY="", VAPID_PRIVATE_KEY="")
+    def test_nothing_logged_when_push_is_not_configured(self):
+        self.client.post(reverse("add"), {"reps": 25})
+        self.assertFalse(NotificationEvent.objects.exists())
+
+    def test_export_includes_the_decisions(self):
+        import csv
+        import tempfile
+        from io import StringIO
+        from pathlib import Path
+
+        from django.core.management import call_command
+
+        self._post(25, draws=[True, False])
+        with tempfile.TemporaryDirectory() as tmp:
+            call_command("export_analysis_data", out=tmp, stdout=StringIO())
+            with open(Path(tmp) / "notifications.csv", encoding="utf-8") as fh:
+                rows = list(csv.DictReader(fh))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(sorted(r["delivered"] for r in rows), ["False", "True"])
+        self.assertNotIn("luca", "".join(str(r) for r in rows))

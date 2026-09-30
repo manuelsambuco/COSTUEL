@@ -140,3 +140,39 @@ class GroupMembership(models.Model):
 
     def __str__(self):
         return f"{self.user} in {self.group}"
+
+
+# --- Esperimento sulle notifiche ---
+
+
+class NotificationEvent(models.Model):
+    """Ogni notifica di progresso che l'app avrebbe mandato a un amico, con la decisione casuale
+    di consegnarla o trattenerla (micro-randomized trial, vedi analysis/notebooks/04)."""
+
+    PROGRESS = "progress"
+    COMPLETED = "completed"
+    KIND_CHOICES = [(PROGRESS, "Serie registrata"), (COMPLETED, "Sfida completata")]
+
+    entry = models.ForeignKey(
+        PushupEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name="notification_events"
+    )
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications_sent")
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications_received"
+    )
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    # Probabilità di consegna in vigore in quel momento e risultato dell'estrazione
+    delivery_prob = models.FloatField()
+    delivered = models.BooleanField()
+    # Dispositivi con notifiche attive del destinatario al momento della decisione:
+    # con 0 la notifica non poteva arrivare comunque, l'analisi li esclude
+    devices = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["recipient", "created_at"])]
+
+    def __str__(self):
+        state = "consegnata" if self.delivered else "trattenuta"
+        return f"{self.sender} → {self.recipient} ({self.kind}, {state})"

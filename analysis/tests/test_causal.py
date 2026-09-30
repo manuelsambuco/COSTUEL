@@ -33,6 +33,10 @@ def test_notification_outcomes_on_a_toy_day():
     assert out.loc[at(10), "prior_notifications"] == 0
     assert not out.loc[at(21), "available"]  # already at 100 when notified
 
+    # app export: notifications to users without a subscribed device are not "available"
+    out = notification_outcomes(entries, notif.assign(devices=[1, 0, 1]), daily).set_index("ts")
+    assert bool(out.loc[at(10), "available"]) and not bool(out.loc[at(10, 20), "available"])
+
 
 def _sim(**kw):
     cfg = SimConfig(n_days=60, seed=5, **kw)

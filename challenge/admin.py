@@ -1,6 +1,8 @@
 from django.contrib import admin
 
-from .models import DailyLog, Friendship, Group, GroupMembership, Profile, PushSubscription, PushupEntry
+from .models import (
+    DailyLog, Friendship, Group, GroupMembership, NotificationEvent, Profile, PushSubscription, PushupEntry,
+)
 
 
 @admin.register(Profile)
@@ -41,3 +43,18 @@ class GroupMembershipInline(admin.TabularInline):
 class GroupAdmin(admin.ModelAdmin):
     list_display = ("name", "created_by", "created_at")
     inlines = [GroupMembershipInline]
+
+
+@admin.register(NotificationEvent)
+class NotificationEventAdmin(admin.ModelAdmin):
+    """Registro dell'esperimento: sola lettura, i dati non vanno modificati a mano."""
+
+    list_display = ("created_at", "sender", "recipient", "kind", "delivered", "devices", "delivery_prob")
+    list_filter = ("delivered", "kind")
+    date_hierarchy = "created_at"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

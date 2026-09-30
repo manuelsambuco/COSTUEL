@@ -2,13 +2,15 @@
 
 import json
 import logging
+import random
 import threading
 
 from django.conf import settings
 from django.db import close_old_connections, transaction
+from django.db.models import Count
 from pywebpush import WebPushException, webpush
 
-from .models import PushSubscription
+from .models import NotificationEvent, PushSubscription
 from .services import display_name
 from .social import challenge_members, group_members
 
@@ -61,24 +63,56 @@ def _send_in_background(*args, **kwargs):
     threading.Thread(target=run, daemon=True).start()
 
 
+_rng = random.SystemRandom()
+
+
+def draw_delivery(prob):
+    """Estrazione casuale: True = consegna, False = trattieni. Separata per poterla fissare nei test."""
+    return _rng.random() < prob
+
+
 def notify_progress(result):
-    """Avvisa gli altri partecipanti dopo che `result.log.user` ha registrato una serie."""
+    """Avvisa gli altri partecipanti dopo che `result.log.user` ha registrato una serie.
+
+    Per ogni destinatario si estrae a caso se consegnare la notifica (probabilità
+    NOTIFY_DELIVERY_PROB) e la decisione viene salvata in NotificationEvent, anche quando
+    la notifica è trattenuta: è l'esperimento che misura se le notifiche funzionano davvero.
+    """
     if not result.added or not push_enabled():
         return
     log = result.log
     user = log.user
     name = display_name(user)
     if result.just_completed:
+        kind = NotificationEvent.COMPLETED
         title = f"🏆 {name} ha completato la sfida!"
         body = f"{log.goal}/{log.goal} piegamenti fatti oggi. Tocca a te!"
     else:
+        kind = NotificationEvent.PROGRESS
         title = f"💪 {name}: +{result.added}"
         body = f"È a {log.total}/{log.goal} oggi (ne mancano {log.remaining})."
+
     recipients = list(challenge_members(user))
-    # Invia solo dopo il salvataggio definitivo, in un thread per non rallentare il tap
-    transaction.on_commit(
-        lambda: _send_in_background(recipients, title, body, tag=f"progress-{user.pk}")
+    if not recipients:
+        return
+    prob = settings.NOTIFY_DELIVERY_PROB
+    devices = dict(
+        PushSubscription.objects.filter(user__in=recipients)
+        .values("user").annotate(n=Count("id")).values_list("user", "n")
     )
+    events = NotificationEvent.objects.bulk_create([
+        NotificationEvent(
+            entry=result.entry, sender=user, recipient=r, kind=kind, delivery_prob=prob,
+            delivered=draw_delivery(prob), devices=devices.get(r.pk, 0),
+        )
+        for r in recipients
+    ])
+    to_send = [e.recipient for e in events if e.delivered]
+    if to_send:
+        # Invia solo dopo il salvataggio definitivo, in un thread per non rallentare il tap
+        transaction.on_commit(
+            lambda: _send_in_background(to_send, title, body, tag=f"progress-{user.pk}")
+        )
 
 
 def _notify_later(users, title, body, url="/", tag=None):
