@@ -23,6 +23,7 @@
             {% else %}
               {{ r.reps }} <small class="muted">· {{ r.done }}/{{ period.days_elapsed }} ✓</small>
             {% endif %}
+            {% if r.extra %}<span class="extra">+{{ r.extra }}</span>{% endif %}
           </span>
         </div>
         <div class="bar"><div class="bar-fill" style="width: {{ r.percent }}%"></div></div>

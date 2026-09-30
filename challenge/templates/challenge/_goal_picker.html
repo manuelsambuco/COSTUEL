@@ -1,0 +1,13 @@
+{# Scelta dell'obiettivo del gruppo. Richiede: goal_choices, min_goal, max_goal, value #}
+<div class="goal-picker" data-goal-picker>
+  <div class="goal-chips" role="group" aria-label="Obiettivi rapidi">
+    {% for n in goal_choices %}
+      <button type="button" class="goal-chip{% if n == value %} active{% endif %}" data-goal="{{ n }}">{{ n }}</button>
+    {% endfor %}
+  </div>
+  <label class="goal-custom">Obiettivo giornaliero
+    <input type="number" name="goal" value="{{ value }}" min="{{ min_goal }}" max="{{ max_goal }}" step="5"
+           inputmode="numeric" required>
+  </label>
+  <small class="muted">Minimo {{ min_goal }}: la sfida base resta per tutti. Chi è nel gruppo può continuare fino a questo numero.</small>
+</div>

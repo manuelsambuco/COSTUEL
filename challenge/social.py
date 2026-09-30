@@ -1,11 +1,16 @@
 """Amicizie e gruppi: chi vede chi e chi riceve le notifiche di chi."""
 
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from .models import Friendship, Group, GroupMembership, new_invite_code
+from .models import Friendship, Group, GroupGoalChange, GroupMembership, new_invite_code
+
+MAX_GROUP_GOAL = 1000
 
 User = get_user_model()
 
@@ -110,16 +115,90 @@ def group_members(group):
     return User.objects.filter(group_memberships__group=group).order_by("group_memberships__joined_at")
 
 
-def create_group(user, name):
+def _clean_goal(goal):
+    """Obiettivo di gruppo valido: almeno la sfida base (100), al massimo MAX_GROUP_GOAL."""
+    minimum = settings.DEFAULT_DAILY_GOAL
+    if goal in (None, ""):
+        return minimum
+    try:
+        goal = int(goal)
+    except (TypeError, ValueError):
+        raise SocialError("Obiettivo non valido.")
+    if goal < minimum:
+        raise SocialError(f"L'obiettivo di un gruppo è almeno {minimum}: la sfida base resta per tutti.")
+    if goal > MAX_GROUP_GOAL:
+        raise SocialError(f"Obiettivo troppo alto (massimo {MAX_GROUP_GOAL}).")
+    return goal
+
+
+def create_group(user, name, goal=None):
     name = (name or "").strip()
     if not name:
         raise SocialError("Dai un nome al gruppo.")
     if len(name) > 40:
         raise SocialError("Nome troppo lungo (massimo 40 caratteri).")
+    goal = _clean_goal(goal)
     with transaction.atomic():
         group = Group.objects.create(name=name, created_by=user)
         GroupMembership.objects.create(group=group, user=user, is_admin=True)
+        # alla creazione l'obiettivo vale da subito
+        GroupGoalChange.objects.create(group=group, goal=goal, effective_from=timezone.localdate())
     return group
+
+
+# --- Obiettivi dei gruppi ---
+
+
+def group_goals_on(group_ids, day=None):
+    """{group_id: obiettivo valido quel giorno} per più gruppi con una sola query."""
+    day = day or timezone.localdate()
+    goals = {gid: settings.DEFAULT_DAILY_GOAL for gid in group_ids}
+    changes = GroupGoalChange.objects.filter(group_id__in=list(goals), effective_from__lte=day).order_by("effective_from")
+    for change in changes:  # in ordine di data: l'ultima valida vince
+        goals[change.group_id] = change.goal
+    return goals
+
+
+def group_goal_on(group, day=None):
+    return group_goals_on([group.pk], day)[group.pk]
+
+
+def group_goals_by_day(group, start, end):
+    """{giorno: obiettivo} per ogni giorno tra start ed end (inclusi), per le classifiche di periodo."""
+    changes = list(GroupGoalChange.objects.filter(group=group, effective_from__lte=end).order_by("effective_from"))
+    out, goal, i = {}, settings.DEFAULT_DAILY_GOAL, 0
+    day = start
+    while day <= end:
+        while i < len(changes) and changes[i].effective_from <= day:
+            goal = changes[i].goal
+            i += 1
+        out[day] = goal
+        day += timedelta(days=1)
+    return out
+
+
+def pending_goal_change(group):
+    """La modifica già decisa che partirà nei prossimi giorni, se c'è."""
+    return group.goal_changes.filter(effective_from__gt=timezone.localdate()).order_by("effective_from").first()
+
+
+def set_group_goal(admin, group_id, goal):
+    """Cambia l'obiettivo del gruppo a partire da domani. Ritorna la modifica salvata."""
+    if not GroupMembership.objects.filter(user=admin, group_id=group_id, is_admin=True).exists():
+        raise SocialError("Solo gli admin possono cambiare l'obiettivo.")
+    goal = _clean_goal(goal)
+    tomorrow = timezone.localdate() + timedelta(days=1)
+    change, _ = GroupGoalChange.objects.update_or_create(
+        group_id=group_id, effective_from=tomorrow, defaults={"goal": goal}
+    )
+    return change
+
+
+def user_group_goals(user, day=None):
+    """[(gruppo, obiettivo del giorno)] per i gruppi dell'utente, obiettivo più alto per primo."""
+    groups = list(Group.objects.filter(memberships__user=user))
+    goals = group_goals_on([g.pk for g in groups], day)
+    return sorted(((g, goals[g.pk]) for g in groups), key=lambda x: (-x[1], x[0].name.lower()))
 
 
 def join_group(user, invite_code):

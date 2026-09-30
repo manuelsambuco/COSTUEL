@@ -23,6 +23,7 @@ urlpatterns = [
     path("gruppi/nuovo/", social.group_create, name="group_create"),
     path("gruppi/entra/", social.group_join_by_code, name="group_join_by_code"),
     path("gruppi/<int:pk>/", social.group_detail, name="group_detail"),
+    path("gruppi/<int:pk>/obiettivo/", social.group_set_goal, name="group_set_goal"),
     path("gruppi/<int:pk>/esci/", social.group_leave, name="group_leave"),
     path("gruppi/<int:pk>/elimina/", social.group_delete, name="group_delete"),
     path("gruppi/<int:pk>/nuovo-link/", social.group_new_link, name="group_new_link"),

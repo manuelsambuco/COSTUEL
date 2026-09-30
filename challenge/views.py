@@ -13,7 +13,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
-from . import services
+from . import services, social
 from .forms import ProfileForm, SignupForm
 from .models import Group, PushSubscription
 from .push import notify_progress, push_enabled, send_to_users
@@ -27,8 +27,14 @@ def _is_ajax(request):
 def _board_context(request):
     user = request.user
     log = services.get_today_log(user)
+    group_goals = social.user_group_goals(user)
+    cap = services.daily_cap(log, group_goals)
     return {
         "log": log,
+        "cap": cap,
+        "at_cap": log.total >= cap,  # pulsanti attivi fino all'obiettivo di gruppo più alto
+        "extra": max(log.total - log.goal, 0),
+        "group_bars": services.group_progress(log, group_goals),
         "entries": log.entries.all()[:10],
         "buttons": settings.QUICK_ADD_BUTTONS,
         "others": services.today_board(user),
@@ -66,15 +72,20 @@ def add(request):
         return HttpResponseBadRequest("Numero non valido")
 
     if result.added == 0:
-        messages.info(request, "Obiettivo di oggi già raggiunto: questi non vengono contati. 💪")
-    elif result.added < result.requested:
-        messages.success(
-            request,
-            f"Contati {result.added} su {result.requested}: hai raggiunto l'obiettivo di "
-            f"{result.log.goal}! 🏆",
-        )
-    elif result.just_completed:
-        messages.success(request, f"Obiettivo di {result.log.goal} raggiunto! 🏆")
+        messages.info(request, "Hai già raggiunto tutti gli obiettivi di oggi: questi non vengono contati. 💪")
+    else:
+        if result.just_completed:
+            text = f"Sfida di {result.log.goal} completata! 🏆"
+            if result.cap > result.log.total:
+                text += f" Puoi continuare per i gruppi fino a {result.cap}."
+            messages.success(request, text)
+        for group, goal in result.groups_completed:
+            messages.success(request, f"Obiettivo di {group.name} ({goal}) raggiunto! 🏅")
+        if result.added < result.requested:
+            messages.success(
+                request,
+                f"Contati {result.added} su {result.requested}: hai raggiunto il massimo di oggi ({result.cap}).",
+            )
     notify_progress(result)
     return _board_response(request)
 

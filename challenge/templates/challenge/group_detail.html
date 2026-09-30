@@ -7,9 +7,32 @@
     <a href="{% url 'groups' %}" class="back" aria-label="Torna ai gruppi">‹</a>
     <div>
       <h1 class="page-title">{{ group.name }}</h1>
-      <p class="muted small">{{ members|length }} membr{{ members|length|pluralize:"o,i" }}</p>
+      <p class="muted small">obiettivo {{ goal_today }} al giorno · {{ members|length }} membr{{ members|length|pluralize:"o,i" }}</p>
     </div>
   </div>
+
+  <section class="card group-today-card{% if my_done %} is-done{% endif %}">
+    <div class="ring-wrap ring-small">
+      <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+        {% include "challenge/_ring_gradient.html" %}
+        <circle class="ring-track" cx="60" cy="60" r="52" />
+        {% if my_total %}
+          <circle class="ring-value" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="{{ my_percent }} 100" />
+        {% endif %}
+      </svg>
+      <div class="ring-label">
+        <span class="ring-total">{{ my_total }}</span>
+        <span class="ring-goal">/ {{ goal_today }}</span>
+      </div>
+    </div>
+    <p class="status">
+      {% if my_done %}<strong>Obiettivo del gruppo raggiunto! 🏅</strong>
+      {% else %}Te ne mancano <strong>{{ my_remaining }}</strong> oggi{% endif %}
+    </p>
+    {% if pending_goal %}
+      <p class="muted small">Da {{ pending_goal.effective_from|date:"l j F" }} l'obiettivo sarà <strong>{{ pending_goal.goal }}</strong>.</p>
+    {% endif %}
+  </section>
 
   <section class="card">
     <h2>Classifica</h2>
@@ -21,7 +44,7 @@
     <div class="invite">
       <input type="text" readonly value="{{ invite_url }}" aria-label="Link d'invito" id="invite-url">
       <button type="button" class="btn btn-small" data-share="{{ invite_url }}"
-              data-share-text="Unisciti al gruppo “{{ group.name }}” su COSTUEL: {{ DEFAULT_DAILY_GOAL }} piegamenti al giorno! 💪">
+              data-share-text="Unisciti al gruppo “{{ group.name }}” su COSTUEL: {{ goal_today }} piegamenti al giorno! 💪">
         Condividi
       </button>
     </div>
@@ -56,6 +79,21 @@
       {% endfor %}
     </ul>
   </section>
+
+  {% if is_admin %}
+    <section class="card">
+      <h2>Obiettivo del gruppo</h2>
+      <form method="post" action="{% url 'group_set_goal' group.pk %}" class="stack-form">
+        {% csrf_token %}
+        {% if pending_goal %}
+          {% include "challenge/_goal_picker.html" with value=pending_goal.goal %}
+        {% else %}
+          {% include "challenge/_goal_picker.html" with value=goal_today %}
+        {% endif %}
+        <button class="btn btn-ghost btn-block">Cambia da domani</button>
+      </form>
+    </section>
+  {% endif %}
 
   <div class="danger-zone">
     <form method="post" action="{% url 'group_leave' group.pk %}" data-confirm="Uscire da “{{ group.name }}”?">

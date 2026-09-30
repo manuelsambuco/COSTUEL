@@ -170,3 +170,17 @@ Di default arrivano tutte. Per attivare l'esperimento (una parte trattenuta a ca
 Render → *Environment* `NOTIFY_DELIVERY_PROB=0.8` (20% trattenuto); per spegnerlo rimettila a `1`.
 Esportazione per l'analisi: `python manage.py export_analysis_data` (cartella `analysis/data/`,
 esclusa da git).
+
+### Obiettivi dei gruppi
+
+La sfida base resta 100 per tutti. Un gruppo può avere un obiettivo più alto (da 100 a 1000),
+scelto alla creazione; l'admin lo cambia dalla pagina del gruppo e il nuovo valore **vale da
+domani** (il giorno in corso non cambia). Regole:
+
+- il cerchio della home, i giorni di fila, il calendario e le statistiche restano sui 100;
+- i pulsanti restano attivi fino all'obiettivo di gruppo più alto; oltre non si conta;
+- sotto il cerchio, "Sfide di gruppo" mostra una barra per ogni gruppo sopra i 100;
+- tra amici tutti sono misurati su 100 (gli extra sono un badge "+50"); nella classifica di un
+  gruppo conta l'obiettivo del gruppo, giorno per giorno;
+- dopo i 100 le notifiche delle serie arrivano solo ai membri dei gruppi in cui contano ancora;
+  chi raggiunge l'obiettivo di un gruppo lo annuncia al gruppo.

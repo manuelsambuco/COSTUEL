@@ -1,8 +1,8 @@
 from datetime import date
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, F, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -10,11 +10,12 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from . import social, stats
-from .models import Group
+from .models import DailyLog, Group, GroupMembership
 from .push import notify_friend_accepted, notify_friend_request, notify_group_join
 from .services import display_name
 
 GROUP_INVITE_SESSION_KEY = "group_invite"
+GOAL_CHOICES = (100, 150, 200, 300)  # scorciatoie nel form; si può scrivere qualsiasi numero
 
 
 def _period(request):
@@ -100,20 +101,29 @@ def friend_remove(request, user_id):
 @login_required
 def groups(request):
     today = timezone.localdate()
-    done_today = Q(
-        memberships__user__daily_logs__day=today,
-        memberships__user__daily_logs__total__gte=F("memberships__user__daily_logs__goal"),
-    )
-    group_list = social.groups_of(request.user).annotate(
-        done_today=Count("memberships__user__daily_logs", filter=done_today, distinct=True)
-    )
-    return render(request, "challenge/groups.html", {"groups": group_list})
+    group_list = list(social.groups_of(request.user))
+    goals = social.group_goals_on([g.pk for g in group_list], today)
+    members = {}
+    for group_id, user_id in GroupMembership.objects.filter(group__in=group_list).values_list("group_id", "user_id"):
+        members.setdefault(group_id, []).append(user_id)
+    all_ids = {uid for ids in members.values() for uid in ids}
+    totals = dict(DailyLog.objects.filter(day=today, user_id__in=all_ids).values_list("user_id", "total"))
+    for g in group_list:
+        # "finito oggi" si misura sull'obiettivo del gruppo, non sulla sfida base
+        g.goal_today = goals[g.pk]
+        g.done_today = sum(totals.get(uid, 0) >= g.goal_today for uid in members.get(g.pk, []))
+    return render(request, "challenge/groups.html", {
+        "groups": group_list,
+        "goal_choices": GOAL_CHOICES,
+        "min_goal": settings.DEFAULT_DAILY_GOAL,
+        "max_goal": social.MAX_GROUP_GOAL,
+    })
 
 
 @require_POST
 @login_required
 def group_create(request):
-    group, ok = _run(request, social.create_group, request.user, request.POST.get("name"))
+    group, ok = _run(request, social.create_group, request.user, request.POST.get("name"), request.POST.get("goal"))
     if ok:
         messages.success(request, f"Gruppo “{group.name}” creato! Condividi il link per invitare gli amici.")
         return redirect("group_detail", pk=group.pk)
@@ -148,15 +158,38 @@ def group_detail(request, pk):
     period = _period(request)
     members = list(social.group_members(group))
     admins = set(group.memberships.filter(is_admin=True).values_list("user_id", flat=True))
+    # nel gruppo conta solo il suo obiettivo, giorno per giorno (può essere cambiato nel tempo)
+    goals_by_day = social.group_goals_by_day(group, period.start, period.end)
+    goal_today = goals_by_day.get(period.today) or social.group_goal_on(group)
+    my_log = DailyLog.objects.filter(user=request.user, day=period.today).first()
+    my_total = min(my_log.total if my_log else 0, goal_today)
     return render(request, "challenge/group_detail.html", {
         "group": group,
         "is_admin": membership.is_admin,
+        "goal_today": goal_today,
+        "my_total": my_total,
+        "my_percent": min(round(my_total * 100 / goal_today), 100),
+        "my_done": my_total >= goal_today,
+        "my_remaining": max(goal_today - my_total, 0),
+        "pending_goal": social.pending_goal_change(group),
+        "goal_choices": GOAL_CHOICES,
+        "min_goal": settings.DEFAULT_DAILY_GOAL,
+        "max_goal": social.MAX_GROUP_GOAL,
         "period": period,
         "tabs": _period_tabs(period),
-        "ranking": stats.leaderboard(members, period, me=request.user),
+        "ranking": stats.leaderboard(members, period, me=request.user, goals_by_day=goals_by_day),
         "members": [{"user": m, "is_admin": m.pk in admins} for m in members],
         "invite_url": request.build_absolute_uri(reverse("group_invite", args=[group.invite_code])),
     })
+
+
+@require_POST
+@login_required
+def group_set_goal(request, pk):
+    change, ok = _run(request, social.set_group_goal, request.user, pk, request.POST.get("goal"))
+    if ok:
+        messages.success(request, f"Da domani l'obiettivo del gruppo sarà {change.goal}. Oggi resta quello attuale.")
+    return redirect("group_detail", pk=pk)
 
 
 @require_POST

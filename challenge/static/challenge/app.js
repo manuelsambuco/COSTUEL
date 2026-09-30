@@ -11,6 +11,20 @@
     }
   }, true);
 
+  // --- Scelta dell'obiettivo di gruppo: le scorciatoie compilano il campo numerico ---
+  document.addEventListener("click", (event) => {
+    const chip = event.target.closest("[data-goal]");
+    if (!chip) return;
+    const picker = chip.closest("[data-goal-picker]");
+    picker.querySelector('input[name="goal"]').value = chip.dataset.goal;
+    picker.querySelectorAll("[data-goal]").forEach((c) => c.classList.toggle("active", c === chip));
+  });
+  document.addEventListener("input", (event) => {
+    const picker = event.target.closest && event.target.closest("[data-goal-picker]");
+    if (!picker) return;
+    picker.querySelectorAll("[data-goal]").forEach((c) => c.classList.toggle("active", c.dataset.goal === event.target.value));
+  });
+
   // --- Condividi / copia il link d'invito ---
   document.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-share]");

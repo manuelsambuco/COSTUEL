@@ -1,13 +1,13 @@
 """Logica della sfida: separata dalle view così è facile da testare e riusare."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
 
 from .models import DailyLog, Profile, PushupEntry
-from .social import challenge_members
+from .social import challenge_members, user_group_goals
 
 MAX_REPS_PER_ENTRY = 500
 
@@ -32,33 +32,68 @@ def get_today_log(user, create=True):
     return log
 
 
+def daily_cap(log, group_goals):
+    """Fin dove contano i piegamenti oggi: la sfida base o l'obiettivo di gruppo più alto."""
+    return max([log.goal, *(goal for _, goal in group_goals)])
+
+
 @dataclass
 class AddResult:
     log: DailyLog
     requested: int
     added: int  # quanti sono stati davvero contati
-    just_completed: bool  # questa serie ha fatto raggiungere l'obiettivo
+    just_completed: bool  # questa serie ha fatto raggiungere la sfida base (100)
     entry: PushupEntry | None = None  # la serie salvata (None se non è stato contato nulla)
+    prev_total: int = 0
+    cap: int = 0  # limite di oggi: max(sfida base, obiettivi dei gruppi)
+    # [(gruppo, obiettivo)] con obiettivo sopra la sfida base...
+    groups_completed: list = field(default_factory=list)  # ...raggiunti con questa serie
+    extra_groups: list = field(default_factory=list)  # ...per cui questa serie contava ancora
 
 
 def add_pushups(user, reps):
-    """Aggiunge `reps` piegamenti a oggi. Quelli oltre l'obiettivo non vengono contati."""
+    """Aggiunge `reps` piegamenti a oggi.
+
+    Contano fino alla sfida base (100) o, se l'utente è in gruppi con un obiettivo più alto,
+    fino al più alto di questi. Quelli oltre non vengono contati.
+    """
     if not 0 < reps <= MAX_REPS_PER_ENTRY:
         raise ValueError(f"Numero di piegamenti non valido: {reps}")
 
     with transaction.atomic():
         log = get_today_log(user)
-        # Blocca la riga: due tap veloci non possono superare l'obiettivo
+        # Blocca la riga: due tap veloci non possono superare il limite
         log = DailyLog.objects.select_for_update().get(pk=log.pk)
-        added = min(reps, log.remaining)
+        group_goals = user_group_goals(user)
+        cap = daily_cap(log, group_goals)
+        prev = log.total
+        added = min(reps, max(cap - prev, 0))
         entry = None
         if added:
             entry = PushupEntry.objects.create(log=log, reps=added)
             log.total += added
             log.save(update_fields=["total"])
+    above_base = [(g, goal) for g, goal in group_goals if goal > log.goal]
     return AddResult(
-        log=log, requested=reps, added=added, just_completed=added > 0 and log.completed, entry=entry
+        log=log, requested=reps, added=added, entry=entry, prev_total=prev, cap=cap,
+        just_completed=added > 0 and prev < log.goal <= log.total,
+        groups_completed=[(g, goal) for g, goal in above_base if added and prev < goal <= log.total],
+        extra_groups=[(g, goal) for g, goal in above_base if added and goal > prev],
     )
+
+
+def group_progress(log, group_goals):
+    """Le barre "Sfide di gruppo" della home: solo i gruppi con un obiettivo sopra la sfida base."""
+    rows = []
+    for group, goal in group_goals:
+        if goal <= log.goal:
+            continue
+        counted = min(log.total, goal)
+        rows.append({
+            "pk": group.pk, "name": group.name, "goal": goal, "total": counted,
+            "percent": min(round(counted * 100 / goal), 100), "completed": counted >= goal,
+        })
+    return rows
 
 
 def undo_last(user):
@@ -89,11 +124,13 @@ def today_board(user):
         log = logs.get(other.pk)
         goal = log.goal if log else get_profile(other).daily_goal
         total = log.total if log else 0
+        counted = min(total, goal)  # qui tutti sono misurati sulla sfida base...
         rows.append({
             "name": display_name(other),
-            "total": total,
+            "total": counted,
+            "extra": max(total - goal, 0),  # ...e quello in più è un badge "+50"
             "goal": goal,
-            "percent": min(round(total * 100 / goal), 100) if goal else 100,
+            "percent": min(round(counted * 100 / goal), 100) if goal else 100,
             "completed": total >= goal,
         })
     # Chi ha fatto di più in cima

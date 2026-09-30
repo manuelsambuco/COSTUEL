@@ -688,3 +688,171 @@ class ExperimentDefaultTests(TestCase):
             raise unittest.SkipTest("valore impostato nell'ambiente")
         self.assertEqual(settings.NOTIFY_DELIVERY_PROB, 1.0)
         self.assertTrue(all(push.draw_delivery(settings.NOTIFY_DELIVERY_PROB) for _ in range(200)))
+
+
+class GroupGoalTests(TestCase):
+    """Sfida base a 100 per tutti; i gruppi possono avere un obiettivo più alto."""
+
+    def setUp(self):
+        self.me = User.objects.create_user("manuel", password="x", first_name="Manuel")
+        self.friend = User.objects.create_user("luca", password="x", first_name="Luca")
+        self.mate = User.objects.create_user("sara", password="x", first_name="Sara")
+        make_friends(self.me, self.friend)  # amico, non nel gruppo
+        self.crossfit = social.create_group(self.me, "Crossfit", goal=200)
+        social.join_group(self.mate, self.crossfit.invite_code)
+        self.today = timezone.localdate()
+
+    def fill(self, user, total):
+        while services.get_today_log(user).total < total:
+            services.add_pushups(user, min(30, total - services.get_today_log(user).total))
+
+    # --- creazione e modifica ---
+
+    def test_goal_validation(self):
+        self.assertEqual(social.group_goal_on(social.create_group(self.me, "Base")), 100)
+        for bad in (50, 5000, "tanti"):
+            with self.assertRaises(social.SocialError):
+                social.create_group(self.me, "X", goal=bad)
+        self.assertEqual(social.group_goal_on(self.crossfit), 200)  # alla creazione vale subito
+
+    def test_admin_change_applies_from_tomorrow(self):
+        with self.assertRaises(social.SocialError):
+            social.set_group_goal(self.mate, self.crossfit.pk, 300)  # non admin
+        change = social.set_group_goal(self.me, self.crossfit.pk, 300)
+        tomorrow = self.today + timedelta(days=1)
+        self.assertEqual(change.effective_from, tomorrow)
+        self.assertEqual(social.group_goal_on(self.crossfit, self.today), 200)
+        self.assertEqual(social.group_goal_on(self.crossfit, tomorrow), 300)
+        self.assertEqual(social.pending_goal_change(self.crossfit).goal, 300)
+        by_day = social.group_goals_by_day(self.crossfit, self.today, tomorrow)
+        self.assertEqual(list(by_day.values()), [200, 300])
+
+    # --- quanto si può fare ---
+
+    def test_group_goal_raises_the_daily_cap_but_the_challenge_stays_at_100(self):
+        result = services.add_pushups(self.me, 90)
+        self.assertEqual(result.cap, 200)
+        result = services.add_pushups(self.me, 30)
+        self.assertTrue(result.just_completed)  # sfida base superata a 120
+        self.assertEqual(result.log.total, 120)
+        self.fill(self.me, 190)
+        result = services.add_pushups(self.me, 30)
+        self.assertEqual((result.added, result.log.total), (10, 200))
+        self.assertEqual([(g.name, goal) for g, goal in result.groups_completed], [("Crossfit", 200)])
+        self.assertEqual(services.add_pushups(self.me, 10).added, 0)
+        self.assertTrue(DailyLog.objects.get(user=self.me, day=self.today).completed)
+        self.assertEqual(stats.streaks(self.me)[0], 1)  # la serie di giorni resta sulla sfida base
+
+    def test_without_higher_groups_the_cap_stays_100(self):
+        self.fill(self.friend, 100)
+        self.assertEqual(services.add_pushups(self.friend, 10).added, 0)
+
+    def test_leaving_the_group_lowers_the_cap_but_keeps_what_was_done(self):
+        self.fill(self.me, 150)
+        social.leave_group(self.me, self.crossfit.pk)
+        self.assertEqual(services.add_pushups(self.me, 10).added, 0)
+        self.assertEqual(services.get_today_log(self.me).total, 150)
+
+    # --- cosa si vede ---
+
+    def test_home_shows_group_bars_and_keeps_buttons_active(self):
+        self.client.force_login(self.me)
+        self.fill(self.me, 150)
+        html = self.client.get(reverse("home")).content.decode()
+        self.assertIn("Sfide di gruppo", html)
+        self.assertIn("150/200", html)
+        self.assertIn("sfida 100 ✓", html)
+        self.assertNotIn('value="10" class="btn btn-add"\n              disabled', html)
+        self.assertNotIn("disabled>+10", html.replace("\n", "").replace(" ", ""))
+        self.fill(self.me, 200)
+        html = self.client.get(reverse("home")).content.decode().replace("\n", "").replace(" ", "")
+        self.assertIn("disabled>+10", html)
+
+    def test_home_without_higher_groups_has_no_group_bars(self):
+        self.client.force_login(self.friend)
+        self.assertNotIn("Sfide di gruppo", self.client.get(reverse("home")).content.decode())
+
+    def test_friends_see_me_at_100_with_an_extra_badge(self):
+        self.fill(self.me, 150)
+        row = next(r for r in services.today_board(self.friend) if r["name"] == "Manuel")
+        self.assertEqual((row["total"], row["extra"], row["completed"]), (100, 50, True))
+        self.client.force_login(self.friend)
+        self.assertContains(self.client.get(reverse("home")), '<span class="extra">+50</span>')
+
+    def test_friends_leaderboard_caps_at_the_challenge(self):
+        self.fill(self.me, 150)
+        self.fill(self.friend, 100)
+        rows = {r["username"]: r for r in stats.leaderboard([self.me, self.friend], stats.get_period("oggi"))}
+        self.assertEqual((rows["manuel"]["reps"], rows["manuel"]["extra"]), (100, 50))
+        self.assertEqual(rows["manuel"]["rank"], rows["luca"]["rank"])  # alla pari sulla sfida base
+
+    def test_group_leaderboard_uses_the_group_goal(self):
+        self.fill(self.me, 150)
+        self.fill(self.mate, 200)
+        period = stats.get_period("oggi")
+        goals = social.group_goals_by_day(self.crossfit, period.start, period.end)
+        rows = {r["username"]: r for r in stats.leaderboard([self.me, self.mate], period, goals_by_day=goals)}
+        self.assertEqual((rows["sara"]["reps"], rows["sara"]["completed"]), (200, True))
+        self.assertEqual((rows["manuel"]["reps"], rows["manuel"]["completed"], rows["manuel"]["goal"]), (150, False, 200))
+
+    def test_group_pages(self):
+        self.fill(self.me, 150)
+        self.fill(self.mate, 200)
+        self.client.force_login(self.me)
+        html = self.client.get(reverse("groups")).content.decode()
+        self.assertIn("obiettivo 200", html)
+        self.assertIn("1/2", html)  # solo Sara ha fatto i 200 del gruppo
+        detail = self.client.get(reverse("group_detail", args=[self.crossfit.pk]))
+        self.assertContains(detail, "Te ne mancano <strong>50</strong>")
+        self.assertContains(detail, 'id="ring-gradient"')  # senza, l'anello resta vuoto
+        self.assertContains(detail, "Cambia da domani")  # admin
+        response = self.client.post(reverse("group_set_goal", args=[self.crossfit.pk]), {"goal": 250}, follow=True)
+        self.assertContains(response, "Da domani l&#x27;obiettivo del gruppo sarà 250")
+        self.assertContains(response, "l'obiettivo sarà <strong>250</strong>")  # avviso della modifica in arrivo
+        self.client.force_login(self.mate)
+        self.assertNotContains(self.client.get(reverse("group_detail", args=[self.crossfit.pk])), "Cambia da domani")
+
+    def test_create_group_form_accepts_a_goal(self):
+        self.client.force_login(self.friend)
+        self.client.post(reverse("group_create"), {"name": "Maratona", "goal": 300})
+        group = Group.objects.get(name="Maratona")
+        self.assertEqual(social.group_goal_on(group), 300)
+
+
+@override_settings(VAPID_PUBLIC_KEY="pub", VAPID_PRIVATE_KEY="priv", NOTIFY_DELIVERY_PROB=1.0)
+class GroupGoalNotificationTests(TestCase):
+    def setUp(self):
+        self.me = User.objects.create_user("manuel", password="x", first_name="Manuel")
+        self.friend = User.objects.create_user("luca", password="x")
+        self.mate = User.objects.create_user("sara", password="x")
+        make_friends(self.me, self.friend)
+        group = social.create_group(self.me, "Crossfit", goal=200)
+        social.join_group(self.mate, group.invite_code)
+        for u in (self.friend, self.mate):
+            PushSubscription.objects.create(user=u, endpoint=f"https://push.example/{u.username}", p256dh="k", auth="a")
+        self.client.force_login(self.me)
+
+    def _post(self, reps):
+        with mock.patch("challenge.push.webpush") as webpush, \
+             mock.patch("challenge.push._send_in_background", new=push.send_to_users):
+            with self.captureOnCommitCallbacks(execute=True):
+                self.client.post(reverse("add"), {"reps": reps})
+        return [(c.kwargs["subscription_info"]["endpoint"].rsplit("/", 1)[-1], json.loads(c.kwargs["data"])["title"])
+                for c in webpush.call_args_list]
+
+    def test_sets_for_the_challenge_reach_everyone(self):
+        sent = self._post(30)
+        self.assertEqual(sorted(u for u, _ in sent), ["luca", "sara"])
+
+    def test_extra_sets_only_reach_group_mates(self):
+        services.add_pushups(self.me, 100)
+        sent = self._post(30)
+        self.assertEqual([u for u, _ in sent], ["sara"])  # Luca non è nel gruppo da 200
+        self.assertEqual(NotificationEvent.objects.get().recipient, self.mate)
+
+    def test_reaching_the_group_goal_is_announced_to_the_group(self):
+        services.add_pushups(self.me, 100)
+        services.add_pushups(self.me, 80)
+        sent = self._post(30)
+        self.assertIn(("sara", "🏅 Manuel ha completato i 200 di Crossfit!"), sent)
+        self.assertNotIn("luca", [u for u, _ in sent])

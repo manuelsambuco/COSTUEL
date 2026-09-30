@@ -554,6 +554,66 @@ a.btn { display: inline-block; text-decoration: none; text-align: center; }
 .legend-dot.done { background: var(--success); }
 .legend-dot.partial { background: linear-gradient(to top, var(--accent) 50%, var(--track) 0); margin-left: 10px; }
 
+/* --- Obiettivi di gruppo --- */
+.ring-goal-done { color: var(--success); font-size: 0.85rem; }
+.group-goals { margin: 4px 0 16px; padding-top: 14px; border-top: 1px solid var(--border); text-align: left; }
+.group-goals h2 { margin-bottom: 10px; }
+.group-goals .others { gap: 10px; }
+.group-goals .other-name { color: var(--text); text-decoration: none; }
+.extra {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+.group-today-card { text-align: center; }
+.group-today-card .status { margin-bottom: 4px; }
+.ring-wrap.ring-small { width: 140px; height: 140px; }
+.ring-small .ring-total { font-size: 2.4rem; }
+
+.stack-form { display: flex; flex-direction: column; gap: 12px; }
+.stack-form > input[type="text"] {
+  font: inherit;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.stack-form > input[type="text"]:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.goal-picker { display: flex; flex-direction: column; gap: 8px; }
+.goal-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.goal-chip {
+  appearance: none;
+  font: inherit;
+  font-weight: 700;
+  padding: 8px 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+}
+.goal-chip.active { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+.goal-custom { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.9rem; color: var(--muted); }
+.goal-custom input {
+  width: 110px;
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.goal-custom input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

@@ -128,6 +128,27 @@ class Group(models.Model):
         return self.name
 
 
+class GroupGoalChange(models.Model):
+    """Storico dell'obiettivo giornaliero di un gruppo.
+
+    L'obiettivo valido in un giorno è l'ultima modifica con ``effective_from`` <= quel giorno
+    (senza modifiche vale DEFAULT_DAILY_GOAL). Alla creazione vale da subito; le modifiche
+    dell'admin valgono dal giorno dopo, così la classifica del giorno non cambia a metà.
+    """
+
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="goal_changes")
+    goal = models.PositiveIntegerField()
+    effective_from = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["group", "effective_from"], name="unique_group_goal_per_day")]
+        ordering = ["group", "effective_from"]
+
+    def __str__(self):
+        return f"{self.group}: {self.goal} dal {self.effective_from}"
+
+
 class GroupMembership(models.Model):
     group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="memberships")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="group_memberships")

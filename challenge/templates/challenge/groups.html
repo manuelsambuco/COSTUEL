@@ -12,7 +12,7 @@
           <a class="card group-card" href="{% url 'group_detail' g.pk %}">
             <div>
               <strong class="group-name">{{ g.name }}</strong>
-              <small class="muted">{{ g.member_count }} membr{{ g.member_count|pluralize:"o,i" }}</small>
+              <small class="muted">obiettivo {{ g.goal_today }} · {{ g.member_count }} membr{{ g.member_count|pluralize:"o,i" }}</small>
             </div>
             <div class="group-today{% if g.done_today == g.member_count %} all-done{% endif %}">
               <strong>{{ g.done_today }}/{{ g.member_count }}</strong>
@@ -31,11 +31,12 @@
 
   <section class="card">
     <h2>Crea un gruppo</h2>
-    <form method="post" action="{% url 'group_create' %}" class="inline-form">
+    <form method="post" action="{% url 'group_create' %}" class="stack-form">
       {% csrf_token %}
       <input type="text" name="name" maxlength="40" placeholder="Es. Palestra del lunedì" required
              aria-label="Nome del gruppo">
-      <button class="btn">Crea</button>
+      {% include "challenge/_goal_picker.html" with value=min_goal %}
+      <button class="btn btn-block">Crea</button>
     </form>
   </section>
 

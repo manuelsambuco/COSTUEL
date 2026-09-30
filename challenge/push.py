@@ -72,29 +72,53 @@ def draw_delivery(prob):
 
 
 def notify_progress(result):
-    """Avvisa gli altri partecipanti dopo che `result.log.user` ha registrato una serie.
+    """Avvisa gli altri dopo che `result.log.user` ha registrato una serie.
 
-    Per ogni destinatario si estrae a caso se consegnare la notifica (probabilità
-    NOTIFY_DELIVERY_PROB) e la decisione viene salvata in NotificationEvent, anche quando
-    la notifica è trattenuta: è l'esperimento che misura se le notifiche funzionano davvero.
+    * Serie che contano per la sfida base (sotto 100): a tutti gli amici e ai membri dei gruppi.
+    * Serie oltre la sfida base: solo ai membri dei gruppi il cui obiettivo non è ancora raggiunto.
+    Per ogni destinatario si estrae a caso se consegnarla (NOTIFY_DELIVERY_PROB) e la decisione
+    viene salvata in NotificationEvent, anche quando la notifica è trattenuta: è l'esperimento
+    che misura se le notifiche funzionano davvero.
+    Chi raggiunge l'obiettivo di un gruppo lo annuncia al gruppo (sempre consegnata).
     """
     if not result.added or not push_enabled():
         return
     log = result.log
     user = log.user
     name = display_name(user)
-    if result.just_completed:
-        kind = NotificationEvent.COMPLETED
-        title = f"🏆 {name} ha completato la sfida!"
-        body = f"{log.goal}/{log.goal} piegamenti fatti oggi. Tocca a te!"
+    if result.prev_total < log.goal:
+        recipients = list(challenge_members(user))
+        if result.just_completed:
+            kind = NotificationEvent.COMPLETED
+            title = f"🏆 {name} ha completato la sfida!"
+            body = f"{log.goal}/{log.goal} piegamenti fatti oggi. Tocca a te!"
+        else:
+            kind = NotificationEvent.PROGRESS
+            title = f"💪 {name}: +{result.added}"
+            body = f"È a {log.total}/{log.goal} oggi (ne mancano {log.remaining})."
     else:
+        seen, recipients = {user.pk}, []
+        for group, _ in result.extra_groups:
+            for member in group_members(group):
+                if member.pk not in seen:
+                    seen.add(member.pk)
+                    recipients.append(member)
         kind = NotificationEvent.PROGRESS
         title = f"💪 {name}: +{result.added}"
-        body = f"È a {log.total}/{log.goal} oggi (ne mancano {log.remaining})."
+        body = "È a {} oggi · {}.".format(
+            log.total, ", ".join(f"{g.name} {min(log.total, goal)}/{goal}" for g, goal in result.extra_groups))
+    if recipients:
+        _record_and_send(user, recipients, kind, result.entry, title, body)
 
-    recipients = list(challenge_members(user))
-    if not recipients:
-        return
+    for group, goal in result.groups_completed:
+        _notify_later(
+            group_members(group).exclude(pk=user.pk), f"🏅 {name} ha completato i {goal} di {group.name}!",
+            "Obiettivo del gruppo raggiunto oggi.", url=f"/gruppi/{group.pk}/", tag=f"progress-{user.pk}",
+        )
+
+
+def _record_and_send(user, recipients, kind, entry, title, body):
+    """Estrazione casuale per destinatario, registro delle decisioni, invio di quelle consegnate."""
     prob = settings.NOTIFY_DELIVERY_PROB
     devices = dict(
         PushSubscription.objects.filter(user__in=recipients)
@@ -102,7 +126,7 @@ def notify_progress(result):
     )
     events = NotificationEvent.objects.bulk_create([
         NotificationEvent(
-            entry=result.entry, sender=user, recipient=r, kind=kind, delivery_prob=prob,
+            entry=entry, sender=user, recipient=r, kind=kind, delivery_prob=prob,
             delivered=draw_delivery(prob), devices=devices.get(r.pk, 0),
         )
         for r in recipients
