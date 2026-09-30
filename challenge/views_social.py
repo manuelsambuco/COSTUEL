@@ -15,7 +15,7 @@ from .push import notify_friend_accepted, notify_friend_request, notify_group_jo
 from .services import display_name
 
 GROUP_INVITE_SESSION_KEY = "group_invite"
-GOAL_CHOICES = (100, 150, 200, 300)  # scorciatoie nel form; si può scrivere qualsiasi numero
+GOAL_CHOICES = (50, 100, 150, 200)  # scorciatoie nel form; si può scrivere qualsiasi numero da 1 a 1000
 
 
 def _period(request):
@@ -115,8 +115,9 @@ def groups(request):
     return render(request, "challenge/groups.html", {
         "groups": group_list,
         "goal_choices": GOAL_CHOICES,
-        "min_goal": settings.DEFAULT_DAILY_GOAL,
+        "min_goal": social.MIN_GROUP_GOAL,
         "max_goal": social.MAX_GROUP_GOAL,
+        "default_goal": settings.DEFAULT_DAILY_GOAL,
     })
 
 
@@ -173,8 +174,9 @@ def group_detail(request, pk):
         "my_remaining": max(goal_today - my_total, 0),
         "pending_goal": social.pending_goal_change(group),
         "goal_choices": GOAL_CHOICES,
-        "min_goal": settings.DEFAULT_DAILY_GOAL,
+        "min_goal": social.MIN_GROUP_GOAL,
         "max_goal": social.MAX_GROUP_GOAL,
+        "default_goal": settings.DEFAULT_DAILY_GOAL,
         "period": period,
         "tabs": _period_tabs(period),
         "ranking": stats.leaderboard(members, period, me=request.user, goals_by_day=goals_by_day),

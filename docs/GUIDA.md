@@ -173,7 +173,7 @@ esclusa da git).
 
 ### Obiettivi dei gruppi
 
-La sfida base resta 100 per tutti. Un gruppo può avere un obiettivo più alto (da 100 a 1000),
+La sfida base resta 100 per tutti. Un gruppo può avere un suo obiettivo (da 1 a 1000),
 scelto alla creazione; l'admin lo cambia dalla pagina del gruppo e il nuovo valore **vale da
 domani** (il giorno in corso non cambia). Regole:
 

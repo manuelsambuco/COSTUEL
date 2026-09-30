@@ -35,7 +35,7 @@
       {% csrf_token %}
       <input type="text" name="name" maxlength="40" placeholder="Es. Palestra del lunedì" required
              aria-label="Nome del gruppo">
-      {% include "challenge/_goal_picker.html" with value=min_goal %}
+      {% include "challenge/_goal_picker.html" with value=default_goal %}
       <button class="btn btn-block">Crea</button>
     </form>
   </section>

@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from .models import Friendship, Group, GroupGoalChange, GroupMembership, new_invite_code
 
+MIN_GROUP_GOAL = 1
 MAX_GROUP_GOAL = 1000
 
 User = get_user_model()
@@ -116,18 +117,19 @@ def group_members(group):
 
 
 def _clean_goal(goal):
-    """Obiettivo di gruppo valido: almeno la sfida base (100), al massimo MAX_GROUP_GOAL."""
-    minimum = settings.DEFAULT_DAILY_GOAL
+    """Obiettivo di gruppo valido: tra MIN_GROUP_GOAL e MAX_GROUP_GOAL (vuoto = la sfida base).
+
+    Un obiettivo sotto la sfida base non la cambia: si continua comunque fino a 100, e nel
+    gruppo si è misurati sul suo obiettivo.
+    """
     if goal in (None, ""):
-        return minimum
+        return settings.DEFAULT_DAILY_GOAL
     try:
         goal = int(goal)
     except (TypeError, ValueError):
         raise SocialError("Obiettivo non valido.")
-    if goal < minimum:
-        raise SocialError(f"L'obiettivo di un gruppo è almeno {minimum}: la sfida base resta per tutti.")
-    if goal > MAX_GROUP_GOAL:
-        raise SocialError(f"Obiettivo troppo alto (massimo {MAX_GROUP_GOAL}).")
+    if not MIN_GROUP_GOAL <= goal <= MAX_GROUP_GOAL:
+        raise SocialError(f"L'obiettivo deve essere tra {MIN_GROUP_GOAL} e {MAX_GROUP_GOAL}.")
     return goal
 
 

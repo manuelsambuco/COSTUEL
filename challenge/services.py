@@ -46,9 +46,10 @@ class AddResult:
     entry: PushupEntry | None = None  # la serie salvata (None se non è stato contato nulla)
     prev_total: int = 0
     cap: int = 0  # limite di oggi: max(sfida base, obiettivi dei gruppi)
-    # [(gruppo, obiettivo)] con obiettivo sopra la sfida base...
-    groups_completed: list = field(default_factory=list)  # ...raggiunti con questa serie
-    extra_groups: list = field(default_factory=list)  # ...per cui questa serie contava ancora
+    # [(gruppo, obiettivo)] con obiettivo diverso dalla sfida base raggiunti con questa serie
+    groups_completed: list = field(default_factory=list)
+    # [(gruppo, obiettivo)] sopra la sfida base per cui questa serie contava ancora
+    extra_groups: list = field(default_factory=list)
 
 
 def add_pushups(user, reps):
@@ -77,7 +78,9 @@ def add_pushups(user, reps):
     return AddResult(
         log=log, requested=reps, added=added, entry=entry, prev_total=prev, cap=cap,
         just_completed=added > 0 and prev < log.goal <= log.total,
-        groups_completed=[(g, goal) for g, goal in above_base if added and prev < goal <= log.total],
+        groups_completed=[
+            (g, goal) for g, goal in group_goals if goal != log.goal and added and prev < goal <= log.total
+        ],
         extra_groups=[(g, goal) for g, goal in above_base if added and goal > prev],
     )
 

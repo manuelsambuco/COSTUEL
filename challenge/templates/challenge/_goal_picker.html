@@ -6,8 +6,8 @@
     {% endfor %}
   </div>
   <label class="goal-custom">Obiettivo giornaliero
-    <input type="number" name="goal" value="{{ value }}" min="{{ min_goal }}" max="{{ max_goal }}" step="5"
+    <input type="number" name="goal" value="{{ value }}" min="{{ min_goal }}" max="{{ max_goal }}" step="1"
            inputmode="numeric" required>
   </label>
-  <small class="muted">Minimo {{ min_goal }}: la sfida base resta per tutti. Chi è nel gruppo può continuare fino a questo numero.</small>
+  <small class="muted">Da {{ min_goal }} a {{ max_goal }}. La sfida base resta {{ default_goal }} per tutti; con un obiettivo più alto chi è nel gruppo può continuare fino a lì.</small>
 </div>

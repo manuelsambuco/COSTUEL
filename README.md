@@ -28,9 +28,9 @@ whether notifications actually cause people to train.
   are not counted (enforced server-side, safe against double taps).
 - **Friends and groups**: friend requests by username; groups joined through a shareable invite
   link (the link also lets new users sign up without the invite code).
-- **Group goals above 100**: 100 stays the shared daily challenge, while a group can set a higher
-  daily goal (e.g. 200). Members keep logging up to their highest group goal; friends still
-  compare on 100 (extras shown as a "+50" badge) and each group ranks on its own goal.
+- **Group goals**: 100 stays the shared daily challenge, while each group sets its own daily goal
+  (1 to 1000). With a higher goal (e.g. 200) members keep logging up to their highest group goal;
+  friends still compare on 100 (extras shown as a "+50" badge) and each group ranks on its own goal.
 - **Leaderboards** for today, this week and this month, for friends and for each group.
 - **Personal statistics**: current and best streak, weekly bar chart, monthly calendar.
 - **Push notifications** to friends when you log a set or complete the challenge, also when the
@@ -113,7 +113,7 @@ python manage.py runserver
 
 Open http://localhost:8000 and sign up. Push notifications need HTTPS or `localhost`.
 
-**Tests**: `python manage.py test challenge` (83 tests) and, for the analysis (after
+**Tests**: `python manage.py test challenge` (87 tests) and, for the analysis (after
 `pip install -r analysis/requirements.txt`), `cd analysis && python -m pytest` (16 tests).
 Both suites, plus a check that no migration is missing, run on every push with
 [GitHub Actions](.github/workflows/tests.yml).

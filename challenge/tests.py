@@ -710,10 +710,33 @@ class GroupGoalTests(TestCase):
 
     def test_goal_validation(self):
         self.assertEqual(social.group_goal_on(social.create_group(self.me, "Base")), 100)
-        for bad in (50, 5000, "tanti"):
+        for bad in (0, -5, 1001, "tanti"):
             with self.assertRaises(social.SocialError):
                 social.create_group(self.me, "X", goal=bad)
+        for ok in (1, 50, 1000):
+            self.assertEqual(social.group_goal_on(social.create_group(self.me, f"G{ok}", goal=ok)), ok)
         self.assertEqual(social.group_goal_on(self.crossfit), 200)  # alla creazione vale subito
+
+    def test_group_below_100_keeps_the_challenge_and_ranks_on_its_goal(self):
+        easy = social.create_group(self.friend, "Principianti", goal=50)
+        self.assertEqual(services.add_pushups(self.friend, 30).cap, 100)  # la sfida base resta 100
+        result = services.add_pushups(self.friend, 30)
+        self.assertEqual([(g.name, goal) for g, goal in result.groups_completed], [("Principianti", 50)])
+        self.fill(self.friend, 100)
+        self.assertEqual(services.add_pushups(self.friend, 10).added, 0)
+        period = stats.get_period("oggi")
+        goals = social.group_goals_by_day(easy, period.start, period.end)
+        row = stats.leaderboard([self.friend], period, goals_by_day=goals)[0]
+        self.assertEqual((row["reps"], row["goal"], row["completed"]), (50, 50, True))
+        self.client.force_login(self.friend)
+        self.assertNotIn("Sfide di gruppo", self.client.get(reverse("home")).content.decode())
+
+    def test_group_goal_suggestions(self):
+        self.client.force_login(self.me)
+        html = self.client.get(reverse("groups")).content.decode()
+        for n in (50, 100, 150, 200):
+            self.assertIn(f'data-goal="{n}"', html)
+        self.assertIn('min="1" max="1000"', html)
 
     def test_admin_change_applies_from_tomorrow(self):
         with self.assertRaises(social.SocialError):
@@ -856,3 +879,21 @@ class GroupGoalNotificationTests(TestCase):
         sent = self._post(30)
         self.assertIn(("sara", "🏅 Manuel ha completato i 200 di Crossfit!"), sent)
         self.assertNotIn("luca", [u for u, _ in sent])
+
+
+class PasswordRulesTests(TestCase):
+    def test_password_may_resemble_username_or_name(self):
+        """Tolto il controllo "troppo simile ai dati personali": restano lunghezza, comuni e solo numeri."""
+        response = self.client.post(reverse("signup"), {
+            "username": "manuel", "first_name": "Manuel",
+            "password1": "manuel2026", "password2": "manuel2026",
+        })
+        self.assertRedirects(response, reverse("home"))
+
+    def test_remaining_rules_still_apply(self):
+        for weak in ("corta1", "12345678901", "password123"):
+            response = self.client.post(reverse("signup"), {
+                "username": f"u{len(weak)}", "password1": weak, "password2": weak,
+            })
+            self.assertEqual(response.status_code, 200, weak)
+            self.assertFalse(User.objects.filter(username=f"u{len(weak)}").exists())
