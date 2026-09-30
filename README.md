@@ -1,168 +1,134 @@
 # COSTUEL 💪
 
-Sfida dei 100 piegamenti al giorno tra amici. Web app Django installabile sul telefono (PWA)
-con notifiche push ogni volta che qualcuno registra una serie.
+**A 100-push-ups-a-day challenge app for friends, and a data-science project built on top of it.**
 
-**Fase 1 (fatta):** login/registrazione, pulsanti +10/+20/+25/+30, tetto all'obiettivo
-(quelli oltre i 100 non contano), annulla ultima serie, progressi degli altri in tempo reale,
-ultimi 7 giorni, notifiche push, installazione come app.
+COSTUEL is an installable web app (PWA): log sets with one tap, see your friends' progress live,
+get a push notification when they train, compete in groups with daily, weekly and monthly
+leaderboards. The [`analysis/`](analysis/README.md) folder then studies the behaviour the app
+produces: habit formation, a "will they make it today?" model, and a randomized experiment on
+whether notifications actually cause people to train.
 
-**Fase 2 (fatta):** amicizie (richiesta per username, accetta/rifiuta), gruppi con link d'invito
-condivisibile (chi apre il link si registra senza codice), classifiche oggi/settimana/mese per
-amici e gruppi, statistiche personali (giorni di fila, record, grafico settimanale, calendario
-mensile), barra di navigazione in basso. Vedi e ricevi notifiche solo da amici e membri dei tuoi gruppi.
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/today.png" width="200" alt="Today: progress ring and quick-add buttons"><br><sub>Today</sub></td>
+    <td align="center"><img src="docs/screenshots/friends.png" width="200" alt="Friends: requests and weekly leaderboard"><br><sub>Friends &amp; leaderboard</sub></td>
+    <td align="center"><img src="docs/screenshots/group.png" width="200" alt="Group: monthly ranking and invite link"><br><sub>Groups</sub></td>
+    <td align="center"><img src="docs/screenshots/stats.png" width="200" alt="Stats: streaks, weekly chart and monthly calendar"><br><sub>Statistics</sub></td>
+  </tr>
+</table>
 
-**Data science:** nella cartella [`analysis/`](analysis/README.md) c'è l'analisi dei dati dell'app
-(in inglese): simulatore con verità nota, analisi di sopravvivenza delle serie di giorni, modello
-predittivo "finirà oggi?" ed effetto causale delle notifiche con un esperimento randomizzato.
-I dati veri si esportano pseudonimizzati con `python manage.py export_analysis_data`.
+<sub>The interface is in Italian: it was built for a real group of friends. Screenshots use demo data.</sub>
 
-## Struttura
+## Features
+
+- **One-tap logging**: +10 / +20 / +25 / +30 buttons, undo last set. Reps beyond the daily goal
+  are not counted (enforced server-side, safe against double taps).
+- **Friends and groups**: friend requests by username; groups joined through a shareable invite
+  link (the link also lets new users sign up without the invite code).
+- **Leaderboards** for today, this week and this month, for friends and for each group.
+- **Personal statistics**: current and best streak, weekly bar chart, monthly calendar.
+- **Push notifications** to friends when you log a set or complete the challenge, also when the
+  app is closed (Web Push with VAPID, via a service worker).
+- **Installable** on Android and iOS as a PWA, dark theme, custom icon.
+- **Built-in experiment**: every friend notification decision is logged and can be randomized
+  (micro-randomized trial), see below.
+
+## Data science
+
+The [`analysis/`](analysis/README.md) package starts from a **simulator with a known ground
+truth** that reproduces the app's mechanics, so every method is shown to recover the planted
+effects before anything is claimed.
+
+| Notebook | Question | Highlights |
+|---|---|---|
+| [01](analysis/notebooks/01_simulation_and_eda.ipynb) | What does the data look like? | Simulation design, EDA, user heterogeneity |
+| [02](analysis/notebooks/02_streak_survival.ipynb) | How long do streaks last? Do they build habits? | Kaplan-Meier, Cox PH; a falling hazard is not proof of habit (selection) |
+| [03](analysis/notebooks/03_completion_model.ipynb) | Will a user reach 100 today? | Time-split validation, calibrated gradient boosting with monotonic constraints, ROC AUC 0.94 |
+| [04](analysis/notebooks/04_notification_effect.ipynb) | Do notifications cause more training? | Naive estimate confounded; micro-randomized trial recovers the truth; diminishing returns per notification |
+
+The app runs the experiment of notebook 04 for real: `NOTIFY_DELIVERY_PROB` sets the share of
+friend notifications delivered (1 by default, i.e. off), every decision is stored
+(`NotificationEvent`), and `python manage.py export_analysis_data` exports pseudonymised data in
+the same schema as the simulator, so the notebooks run unchanged on real usage.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  phone["Phone / browser<br/>PWA + service worker"] -- HTTPS --> app["Django app<br/>Render · gunicorn · WhiteNoise"]
+  app -- SQL --> db[("PostgreSQL<br/>Neon")]
+  app -- "Web Push (VAPID)" --> push["Push services<br/>FCM · APNs · Mozilla"]
+  push --> phone
+  app -. "export_analysis_data<br/>pseudonymised CSV" .-> analysis["analysis/<br/>notebooks"]
+```
+
+- **Backend**: Python 3.12, Django 5.2, server-rendered templates; PostgreSQL in production,
+  SQLite locally; all configuration from environment variables.
+- **Frontend**: plain HTML/CSS and a small vanilla-JS layer (no framework): fetch-based updates,
+  30-second polling of friends' progress, service worker for push, web app manifest.
+- **Hosting**: free tiers only: Render (web service from `render.yaml`) and Neon (Postgres).
+- **Analysis**: pandas, statsmodels, lifelines, scikit-learn, matplotlib.
+
+### Design decisions worth a look
+
+| Decision | Where |
+|---|---|
+| The daily cap is enforced in a transaction with a row lock, so concurrent taps can't exceed the goal | [`services.add_pushups`](challenge/services.py) |
+| Each day stores a snapshot of the goal, so changing the goal never rewrites history or streaks | [`DailyLog.goal`](challenge/models.py) |
+| A single function decides who sees whom (friends plus group members), used by leaderboards and notifications alike | [`social.challenge_members`](challenge/social.py) |
+| Push is sent after the transaction commits, in a background thread; expired subscriptions are removed on 404/410 | [`push.py`](challenge/push.py) |
+| Notification decisions are randomized and logged, with the recipient's active devices recorded *before* the draw | [`push.notify_progress`](challenge/push.py) |
+| Post-signup redirects are validated against open redirects; invite links skip the signup code only for existing groups | [`views.signup`](challenge/views.py) |
+| Exports use an HMAC of the user id as pseudonym; data exports and backups are git-ignored | [`export_analysis_data`](challenge/management/commands/export_analysis_data.py) |
+
+## Repository layout
 
 ```
-config/settings.py        impostazioni (tutto configurabile da variabili d'ambiente)
-challenge/models.py       Profile (obiettivo), DailyLog (totale del giorno), PushupEntry (serie), PushSubscription
-                          + Friendship, Group, GroupMembership
-challenge/services.py     logica: aggiunta con tetto, annulla, progressi di oggi, ultimi giorni
-challenge/social.py       amicizie, gruppi, challenge_members() (chi vede chi)
-challenge/stats.py        periodi, classifiche, giorni di fila, calendario mensile
-challenge/push.py         invio notifiche
-challenge/views.py        pagina Oggi, registrazione, notifiche, PWA
-challenge/views_social.py pagine Amici, Gruppi, Statistiche
-challenge/templates/      HTML, service worker (sw.js), manifest
-challenge/static/         CSS, JS, icone
-challenge/tests.py        test automatici
+challenge/          the Django app: models, services, social graph, stats, push, views, templates, tests
+config/             settings and URLs
+analysis/           data-science package, notebooks and tests (own requirements)
+docs/GUIDA.md       step-by-step operating guide in Italian (deploy, backups, changing the goal)
+backup.py/.bat      one-click backup of the production database
+render.yaml         Render blueprint
 ```
 
-Punti pensati per le fasi successive:
-- **Obiettivo modificabile:** `Profile.daily_goal` esiste già (oggi 100 per tutti). Ogni giorno
-  salva una copia dell'obiettivo (`DailyLog.goal`), così cambiarlo non altera lo storico.
-- **Cerchia della sfida:** `social.challenge_members()` decide chi vede i tuoi progressi e riceve
-  le tue notifiche (amici + membri dei tuoi gruppi).
+## Running locally
 
-## Avvio in locale (Windows)
-
-```powershell
+```bash
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate                 # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-copy .env.example .env
-python manage.py genvapid          # copia le due righe VAPID_... nel file .env
+copy .env.example .env                 # macOS/Linux: cp .env.example .env
+python manage.py genvapid              # paste the two VAPID_ lines into .env
 python manage.py migrate
-python manage.py createsuperuser   # facoltativo: accesso a /admin
 python manage.py runserver
 ```
 
-Apri http://localhost:8000 e registrati. Test: `python manage.py test challenge`.
+Open http://localhost:8000 and sign up. Push notifications need HTTPS or `localhost`.
 
-## Pubblicazione online gratis (Render + Neon)
+**Tests**: `python manage.py test challenge` (68 tests) and, for the analysis (after
+`pip install -r analysis/requirements.txt`), `cd analysis && python -m pytest` (16 tests).
 
-Servono 3 account gratuiti: **GitHub**, **Neon** (database), **Render** (server).
+## Deployment
 
-1. **GitHub:** crea un repository (anche privato) e carica il progetto:
-   ```powershell
-   git init
-   git add .
-   git commit -m "COSTUEL - fase 1"
-   git branch -M main
-   git remote add origin https://github.com/TUO-UTENTE/costuel.git
-   git push -u origin main
-   ```
-   Il file `.env` NON viene caricato (è in `.gitignore`): le chiavi restano sul tuo PC.
+The repository is a Render blueprint: *New → Blueprint* on Render, then set the variables below.
+The database is a free Neon Postgres (Render's free Postgres expires after 30 days).
 
-2. **Neon** (https://neon.com): crea un progetto, regione Europa (Frankfurt).
-   Copia la *connection string* (`postgresql://...?sslmode=require`).
+| Variable | Purpose |
+|---|---|
+| `SECRET_KEY` | generated by Render |
+| `DATABASE_URL` | Neon connection string (without pooling) |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_CONTACT` | Web Push keys (`python manage.py genvapid`) |
+| `SIGNUP_CODE` | invite code required to sign up (empty = open registration) |
+| `DEFAULT_DAILY_GOAL` | daily goal for new users and in the UI texts (default 100) |
+| `NOTIFY_DELIVERY_PROB` | share of friend notifications delivered (default 1 = experiment off) |
 
-3. **Render** (https://render.com): *New → Blueprint*, collega il repository.
-   Render legge `render.yaml` e chiede i valori mancanti:
-   - `DATABASE_URL` → la stringa di Neon
-   - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` → le stesse del tuo `.env`
-   - `VAPID_CONTACT` → `mailto:tuaemail@...`
-   - `SIGNUP_CODE` → un codice a tua scelta da dare solo agli amici
+Useful commands: `set_goal` (change the daily goal for everyone or one user, from today or tomorrow),
+`export_analysis_data`, `genvapid`. The full step-by-step guide, including backups and restores,
+is in [docs/GUIDA.md](docs/GUIDA.md) (Italian).
 
-   Dopo il deploy l'app è su `https://costuel-xxxx.onrender.com`.
-   Per entrare in /admin (facoltativo): la Shell di Render non c'è nel piano gratuito, quindi
-   crea l'amministratore dal tuo PC puntando al database di Neon:
-   ```powershell
-   $env:DATABASE_URL="<stringa di Neon>"; python manage.py createsuperuser; Remove-Item Env:DATABASE_URL
-   ```
+## About
 
-Ogni `git push` successivo ripubblica l'app in automatico.
-
-### Limiti del piano gratuito
-- Render "addormenta" il server dopo 15 minuti senza visite: la prima apertura dopo una pausa
-  richiede circa un minuto. Le notifiche non ne risentono (partono quando qualcuno registra una serie,
-  quindi il server è sveglio).
-- Neon gratis: 0,5 GB, più che sufficienti per anni di piegamenti.
-- Non usare il database gratuito di Render: scade dopo 30 giorni. Per questo usiamo Neon.
-
-## Installare l'app sul telefono e attivare le notifiche
-
-**Android (Chrome):** apri il sito → menu ⋮ → *Installa app* (o *Aggiungi a schermata Home*).
-Apri l'app → *Attiva notifiche*.
-
-**iPhone (iOS 16.4 o successivo):** apri il sito **in Safari** → pulsante *Condividi* →
-*Aggiungi alla schermata Home*. Apri l'app **dall'icona** (non da Safari) → *Attiva notifiche*.
-Su iPhone le notifiche web funzionano solo così.
-
-Usa il pulsante *Prova* per ricevere una notifica di test.
-
-## Gestione nel tempo
-
-### Dove stanno le cose
-
-| Cosa | Dove | Note |
-|---|---|---|
-| Codice | questa cartella + GitHub | GitHub è la copia di riferimento: Render pubblica da lì |
-| Dati veri (utenti, piegamenti, gruppi) | database Neon | né sul PC né su GitHub |
-| Chiavi segrete (`.env`) | solo sul PC | su Render ci sono le stesse, in *Environment* |
-| `db.sqlite3` | solo sul PC | database di prova locale, si può cancellare |
-
-### Fare una modifica
-
-```powershell
-python manage.py test challenge   # tutto verde?
-git add -A
-git commit -m "Descrizione della modifica"
-git push                          # Render ripubblica in 3-5 minuti
-```
-
-Se una modifica rompe qualcosa online: su Render → *Events* → *Rollback* alla versione precedente.
-
-### Cambiare l'obiettivo giornaliero
-
-Il comando si esegue dal PC ma agisce sul database online, passando la stringa di Neon:
-
-```powershell
-$env:DATABASE_URL="<stringa di Neon>"
-python manage.py set_goal 150                     # tutti, da oggi
-python manage.py set_goal 150 --da-domani         # tutti, da domani
-python manage.py set_goal 80 --utente luca        # solo un utente
-Remove-Item Env:DATABASE_URL
-```
-
-- I giorni passati mantengono l'obiettivo che avevano: statistiche e serie restano corrette.
-- Per i **nuovi iscritti** e per i testi dell'app ("150 piegamenti al giorno") imposta anche
-  `DEFAULT_DAILY_GOAL=150` su Render → *Environment*.
-- In alternativa, dal pannello `/admin` → *Profiles* puoi modificare l'obiettivo di ognuno.
-
-### Backup dei dati
-
-Neon gratis conserva la cronologia solo per 6 ore. Ogni tanto (es. una volta a settimana) salva una copia:
-**doppio clic su `backup.bat`** nella cartella del progetto.
-
-La prima volta si apre una finestra: su Neon premi *Connect* (senza pooling) → *Copy*, poi nella finestra
-premi **Incolla** e **Fai il backup**. Con *Ricorda su questo PC* la stringa viene salvata nel file `.env`
-(chiave `NEON_DATABASE_URL`) e dalle volte successive il backup parte da solo. Se cambi la password su Neon,
-lo script se ne accorge, dimentica quella vecchia e te la richiede. Il backup viene salvato in
-`backups/backup-AAAA-MM-GG_HHMM.json`. La cartella `backups/` non va su GitHub perché contiene dati
-personali (e le password cifrate), ma essendo sul Desktop viene salvata anche su OneDrive.
-
-Per ripristinare un backup in un database **vuoto** (es. un nuovo progetto Neon):
-
-```powershell
-$env:DATABASE_URL="<stringa del database vuoto>"
-python manage.py migrate
-python manage.py loaddata backups\backup-AAAA-MM-GG_HHMM.json
-Remove-Item Env:DATABASE_URL
-```
+Built for a real push-up challenge between friends. Developed with the help of
+[Claude Code](https://claude.com/claude-code) as an AI pair programmer; commits are co-authored
+accordingly.
