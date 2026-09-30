@@ -1,5 +1,8 @@
 # COSTUEL 💪
 
+[![Tests](https://github.com/manuelsambuco/COSTUEL/actions/workflows/tests.yml/badge.svg)](https://github.com/manuelsambuco/COSTUEL/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **A 100-push-ups-a-day challenge app for friends, and a data-science project built on top of it.**
 
 COSTUEL is an installable web app (PWA): log sets with one tap, see your friends' progress live,
@@ -108,6 +111,8 @@ Open http://localhost:8000 and sign up. Push notifications need HTTPS or `localh
 
 **Tests**: `python manage.py test challenge` (68 tests) and, for the analysis (after
 `pip install -r analysis/requirements.txt`), `cd analysis && python -m pytest` (16 tests).
+Both suites, plus a check that no migration is missing, run on every push with
+[GitHub Actions](.github/workflows/tests.yml).
 
 ## Deployment
 
@@ -132,3 +137,5 @@ is in [docs/GUIDA.md](docs/GUIDA.md) (Italian).
 Built for a real push-up challenge between friends. Developed with the help of
 [Claude Code](https://claude.com/claude-code) as an AI pair programmer; commits are co-authored
 accordingly.
+
+Released under the [MIT License](LICENSE).
