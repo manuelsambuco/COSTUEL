@@ -163,8 +163,9 @@ VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_CONTACT = os.environ.get("VAPID_CONTACT", "mailto:admin@example.com")
 
 # Esperimento sulle notifiche: probabilità di consegnare una notifica di progresso a un amico.
-# 1.0 = sempre (nessun esperimento); 0.8 = il 20% viene trattenuto a caso e registrato.
-NOTIFY_DELIVERY_PROB = float(os.environ.get("NOTIFY_DELIVERY_PROB", 0.8))
+# 1.0 = sempre (default: esperimento spento, le decisioni vengono comunque registrate);
+# 0.8 = il 20% viene trattenuto a caso. Si attiva da Render senza toccare il codice.
+NOTIFY_DELIVERY_PROB = float(os.environ.get("NOTIFY_DELIVERY_PROB", 1.0))
 if not 0.0 <= NOTIFY_DELIVERY_PROB <= 1.0:
     raise RuntimeError("NOTIFY_DELIVERY_PROB deve essere tra 0 e 1")
 

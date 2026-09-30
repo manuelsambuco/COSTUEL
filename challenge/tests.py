@@ -674,3 +674,17 @@ class NotificationExperimentTests(TestCase):
         self.assertEqual(len(rows), 2)
         self.assertEqual(sorted(r["delivered"] for r in rows), ["False", "True"])
         self.assertNotIn("luca", "".join(str(r) for r in rows))
+
+
+class ExperimentDefaultTests(TestCase):
+    def test_experiment_is_off_unless_configured(self):
+        """Senza NOTIFY_DELIVERY_PROB tutte le notifiche arrivano: l'esperimento si attiva solo da Render."""
+        import os
+        import unittest
+
+        from django.conf import settings
+
+        if "NOTIFY_DELIVERY_PROB" in os.environ:
+            raise unittest.SkipTest("valore impostato nell'ambiente")
+        self.assertEqual(settings.NOTIFY_DELIVERY_PROB, 1.0)
+        self.assertTrue(all(push.draw_delivery(settings.NOTIFY_DELIVERY_PROB) for _ in range(200)))

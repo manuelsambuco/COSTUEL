@@ -15,7 +15,7 @@ real, pseudonymised export of the app (`python manage.py export_analysis_data`).
 | [01](notebooks/01_simulation_and_eda.ipynb) | What does the data look like? | simulation design, EDA | Completion ~50% decaying to ~36%; strong weekly and daily rhythms; very heterogeneous users |
 | [02](notebooks/02_streak_survival.ipynb) | How long do streaks last, and do they build habits? | Kaplan-Meier, Cox PH (clustered SEs), life tables | +10 pp of early commitment ≈ −16% daily risk of breaking. A falling hazard is **not** proof of habit: it also appears with no habit effect (selection / frailty) |
 | [03](notebooks/03_completion_model.ipynb) | Will a user reach 100 today? | time-split validation, logistic regression, gradient boosting with monotonic constraints, calibration, permutation importance | ROC AUC 0.94 on future days (0.91 for a 2-feature baseline), well calibrated |
-| [04](notebooks/04_notification_effect.ipynb) | Do friends' notifications cause more training? (now running live in the app) | confounding, micro-randomized trial, Poisson GLM with fixed effects, placebo checks | Naive estimate biased (+19% effect when the truth is zero); randomized design recovers the planted 1.5×. Diminishing returns: +25% for the first notification of the hour, +5% after two |
+| [04](notebooks/04_notification_effect.ipynb) | Do friends' notifications cause more training? (ready to run live in the app) | confounding, micro-randomized trial, Poisson GLM with fixed effects, placebo checks | Naive estimate biased (+19% effect when the truth is zero); randomized design recovers the planted 1.5×. Diminishing returns: +25% for the first notification of the hour, +5% after two |
 
 ### Things worth noticing
 
@@ -62,9 +62,9 @@ then load it with `costuel_analysis.io.load_tables("data/real")` instead of `sim
 
 ### The live experiment
 
-The app runs the micro-randomized trial of notebook 04 for real: every friend-progress
-notification is delivered with probability `NOTIFY_DELIVERY_PROB` (default 0.8, i.e. 20% held
-back at random) and every decision is logged (`NotificationEvent`: sender, recipient, time,
+The app can run the micro-randomized trial of notebook 04 for real: every friend-progress
+notification is delivered with probability `NOTIFY_DELIVERY_PROB` (default 1, i.e. switched off
+until there are enough users; e.g. 0.8 holds back 20% at random) and every decision is logged (`NotificationEvent`: sender, recipient, time,
 delivered, devices, probability). The export writes it to `notifications.csv`, which
 `notification_outcomes` / `proximal_effect` accept unchanged; recipients without a subscribed
 device are excluded automatically. One caveat the simulation does not have: users also see
