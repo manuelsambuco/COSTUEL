@@ -51,7 +51,7 @@ def build_dialog():
 
     result = {"url": "", "remember": False}
     root = tk.Tk()
-    root.title("COSTUEL · Backup dei dati")
+    root.title("OneMore · Backup dei dati")
     root.resizable(False, False)
     root.attributes("-topmost", True)
     frame = tk.Frame(root, padx=18, pady=16)
@@ -108,7 +108,7 @@ def ask_url():
 
 def notify(title, message, error=False):
     print(message)
-    if os.environ.get("COSTUEL_NO_GUI"):
+    if os.environ.get("ONEMORE_NO_GUI"):
         return
     try:
         import tkinter as tk
@@ -147,7 +147,7 @@ def run_backup(url):
     return output
 
 
-VENV_PYTHON = Path(r"C:\venvs\costuel\Scripts\python.exe")
+VENV_PYTHON = Path(r"C:\venvs\onemore\Scripts\python.exe")
 
 
 def ensure_project_python():
@@ -167,8 +167,8 @@ def ensure_project_python():
     notify(
         "Ambiente Python mancante",
         "Django non è installato. Crea l'ambiente del progetto con:\n\n"
-        "python -m venv C:\\venvs\\costuel\n"
-        "C:\\venvs\\costuel\\Scripts\\pip install -r requirements.txt",
+        "python -m venv C:\\venvs\\onemore\n"
+        "C:\\venvs\\onemore\\Scripts\\pip install -r requirements.txt",
         error=True,
     )
     return 1

@@ -27,8 +27,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from costuel_analysis import SimConfig, simulate
-from costuel_analysis.plotting import use_style, subtitle, date_axis, SERIES, REFERENCE, MUTED, INK_SECONDARY, GRID
+from onemore_analysis import SimConfig, simulate
+from onemore_analysis.plotting import use_style, subtitle, date_axis, SERIES, REFERENCE, MUTED, INK_SECONDARY, GRID
 
 use_style()
 pd.set_option("display.precision", 3)
@@ -48,7 +48,7 @@ NB01 = [
     md("""
 # 01 · Simulated data and exploratory analysis
 
-**COSTUEL** is a small web app where friends challenge each other to do 100 push-ups a day:
+**OneMore** is a small web app where friends challenge each other to do 100 push-ups a day:
 quick buttons (+10, +20, +25, +30) log a *set*, anything beyond the daily goal is not counted,
 and every set sends a push notification to the user's friends.
 
@@ -193,7 +193,7 @@ a survival problem: Kaplan-Meier curves and a Cox model.
 """),
     code(SETUP + """
 from lifelines import CoxPHFitter, KaplanMeierFitter
-from costuel_analysis.features import complete_panel, streak_spells"""),
+from onemore_analysis.features import complete_panel, streak_spells"""),
     code("""
 cfg = SimConfig()
 sim = simulate(cfg)
@@ -334,7 +334,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
-from costuel_analysis.features import complete_panel, completion_snapshots"""),
+from onemore_analysis.features import complete_panel, completion_snapshots"""),
     code("""
 cfg = SimConfig()
 sim = simulate(cfg)
@@ -482,7 +482,7 @@ probability 50%. Whether a particular notification reached you is then random, i
 the together-session, so comparing delivered vs. not-delivered is unbiased.
 """),
     code(SETUP + """
-from costuel_analysis.causal import build_slots, naive_effect, notification_outcomes, proximal_effect, randomized_effect"""),
+from onemore_analysis.causal import build_slots, naive_effect, notification_outcomes, proximal_effect, randomized_effect"""),
     md("""
 ## Part 1 · Can we recover the planted effect?
 

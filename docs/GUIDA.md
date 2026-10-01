@@ -1,4 +1,4 @@
-# COSTUEL · guida operativa
+# OneMore · guida operativa
 
 Istruzioni pratiche per far girare, pubblicare e gestire l'app (in italiano).
 La presentazione del progetto, in inglese, è nel [README](../README.md); l'analisi dei dati
@@ -58,7 +58,7 @@ Servono 3 account gratuiti: **GitHub**, **Neon** (database), **Render** (server)
    ```powershell
    git init
    git add .
-   git commit -m "COSTUEL - fase 1"
+   git commit -m "OneMore - fase 1"
    git branch -M main
    git remote add origin https://github.com/TUO-UTENTE/costuel.git
    git push -u origin main

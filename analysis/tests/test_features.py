@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from costuel_analysis.features import complete_panel, completion_snapshots, daily_features, streak_spells
+from onemore_analysis.features import complete_panel, completion_snapshots, daily_features, streak_spells
 
 D = pd.Timestamp("2026-03-02")
 

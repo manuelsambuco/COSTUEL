@@ -1,4 +1,4 @@
-# COSTUEL · data science
+# OneMore · data science
 
 Behavioural analysis of a habit app (100 push-ups a day, with friends), built around a
 **simulator with a known ground truth**: every method is shown to recover the effect planted
@@ -32,7 +32,7 @@ real, pseudonymised export of the app (`python manage.py export_analysis_data`).
 ## Layout
 
 ```
-costuel_analysis/
+onemore_analysis/
   simulate.py   generative model with planted effects (SimConfig = the ground truth)
   features.py   panel, streak spells, per-cutoff snapshots (same code for real and simulated data)
   causal.py     slot-level hazard data, naive / randomized / proximal effect estimators
@@ -58,7 +58,7 @@ On real data, from the project root:
 python manage.py export_analysis_data        # writes analysis/data/real/ (git-ignored)
 ```
 
-then load it with `costuel_analysis.io.load_tables("data/real")` instead of `simulate()`.
+then load it with `onemore_analysis.io.load_tables("data/real")` instead of `simulate()`.
 
 ### The live experiment
 

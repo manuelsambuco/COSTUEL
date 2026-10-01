@@ -353,7 +353,7 @@ class GroupTests(TestCase):
 
     def test_join_by_pasted_link(self):
         self.client.force_login(self.stranger)
-        link = f"https://costuel.onrender.com/g/{self.group.invite_code}/"
+        link = f"https://onemore.onrender.com/g/{self.group.invite_code}/"
         self.client.post(reverse("group_join_by_code"), {"code": link})
         self.assertTrue(social.get_membership(self.stranger, self.group.pk))
 

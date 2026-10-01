@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from costuel_analysis import SimConfig, simulate
-from costuel_analysis.causal import (
+from onemore_analysis import SimConfig, simulate
+from onemore_analysis.causal import (
     _recent,
     build_slots,
     naive_effect,

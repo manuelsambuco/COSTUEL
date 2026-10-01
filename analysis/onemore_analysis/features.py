@@ -1,4 +1,4 @@
-"""Turn raw COSTUEL tables into analysis-ready datasets.
+"""Turn raw OneMore tables into analysis-ready datasets.
 
 Works identically on simulated data and on the app export (``python manage.py
 export_analysis_data``): both share the schema users / edges / entries / daily.

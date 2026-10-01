@@ -1,5 +1,5 @@
 (() => {
-  const cfg = window.COSTUEL;
+  const cfg = window.ONEMORE;
   const board = document.getElementById("board");
 
   // --- Conferma prima delle azioni delicate (form con data-confirm) ---
@@ -67,7 +67,7 @@
     const url = button.dataset.share;
     const text = button.dataset.shareText || "";
     if (navigator.share) {
-      try { await navigator.share({ title: "COSTUEL", text, url }); } catch (e) { /* annullato */ }
+      try { await navigator.share({ title: "OneMore", text, url }); } catch (e) { /* annullato */ }
       return;
     }
     try {
@@ -185,7 +185,7 @@
     if (!pushSupported) {
       if (isIOS && !isStandalone) {
         show("Installa l'app per le notifiche",
-          "Su iPhone: tocca Condividi → \"Aggiungi alla schermata Home\", poi apri COSTUEL dall'icona.", [], true);
+          "Su iPhone: tocca Condividi → \"Aggiungi alla schermata Home\", poi apri OneMore dall'icona.", [], true);
       } else {
         show("Notifiche non disponibili", "Questo browser non supporta le notifiche push. Prova con Chrome o Safari.");
       }

@@ -1,5 +1,5 @@
 """
-Impostazioni di COSTUEL.
+Impostazioni di OneMore.
 
 Tutti i valori sensibili o che cambiano tra locale e produzione
 si leggono da variabili d'ambiente (vedi .env.example).
@@ -144,7 +144,7 @@ if not DEBUG and not TESTING:
     CSRF_COOKIE_SECURE = True
 
 
-# --- COSTUEL ---
+# --- OneMore ---
 
 # Obiettivo giornaliero di default. Ogni utente ha il suo (Profile.daily_goal),
 # che per ora vale sempre questo numero: in futuro basterà renderlo modificabile.

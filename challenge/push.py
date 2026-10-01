@@ -150,7 +150,7 @@ def _notify_later(users, title, body, url="/", tag=None):
 def notify_friend_request(friendship):
     name = display_name(friendship.from_user)
     _notify_later(
-        [friendship.to_user], f"👋 {name} vuole sfidarti", "Accetta la richiesta di amicizia su COSTUEL.",
+        [friendship.to_user], f"👋 {name} vuole sfidarti", "Accetta la richiesta di amicizia su OneMore.",
         url="/amici/", tag=f"friend-{friendship.pk}",
     )
 

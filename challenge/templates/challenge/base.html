@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>{% block title %}COSTUEL{% endblock %}</title>
+  <title>{% block title %}OneMore{% endblock %}</title>
   <meta name="description" content="Sfida dei {{ DEFAULT_DAILY_GOAL }} piegamenti al giorno">
   <meta name="theme-color" content="#0b0b0f">
   <meta name="color-scheme" content="dark">
@@ -12,13 +12,13 @@
   <link rel="apple-touch-icon" href="{% static 'challenge/icons/apple-touch-icon.png' %}">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="COSTUEL">
+  <meta name="apple-mobile-web-app-title" content="OneMore">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="{% static 'challenge/app.css' %}">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="{% url 'home' %}"><img class="brand-mark" src="{% static 'challenge/icons/favicon-64.png' %}" alt="" width="36" height="36"> COSTUEL</a>
+    <a class="brand" href="{% url 'home' %}"><img class="brand-mark" src="{% static 'challenge/icons/favicon-64.png' %}" alt="" width="36" height="36"> OneMore</a>
     {% if user.is_authenticated %}
       <form method="post" action="{% url 'logout' %}" class="topbar-user">
         {% csrf_token %}
@@ -64,7 +64,7 @@
   {% endif %}
 
   <script>
-    window.COSTUEL = {
+    window.ONEMORE = {
       vapidPublicKey: "{{ VAPID_PUBLIC_KEY }}",
       csrfToken: "{{ csrf_token }}",
       urls: {

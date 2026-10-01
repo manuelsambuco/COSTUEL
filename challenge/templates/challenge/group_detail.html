@@ -1,6 +1,6 @@
 {% extends "challenge/base.html" %}
 
-{% block title %}{{ group.name }} · COSTUEL{% endblock %}
+{% block title %}{{ group.name }} · OneMore{% endblock %}
 
 {% block content %}
   <div class="page-head">
@@ -44,7 +44,7 @@
     <div class="invite">
       <input type="text" readonly value="{{ invite_url }}" aria-label="Link d'invito" id="invite-url">
       <button type="button" class="btn btn-small" data-share="{{ invite_url }}"
-              data-share-text="Unisciti al gruppo “{{ group.name }}” su COSTUEL: {{ goal_today }} piegamenti al giorno! 💪">
+              data-share-text="Unisciti al gruppo “{{ group.name }}” su OneMore: {{ goal_today }} piegamenti al giorno! 💪">
         Condividi
       </button>
     </div>

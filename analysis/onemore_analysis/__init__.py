@@ -1,4 +1,4 @@
-"""Analysis toolkit for COSTUEL: simulation with known ground truth, features, causal estimates."""
+"""Analysis toolkit for OneMore: simulation with known ground truth, features, causal estimates."""
 
 from .simulate import SimConfig, SimResult, simulate
 

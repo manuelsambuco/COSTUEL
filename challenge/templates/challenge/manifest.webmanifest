@@ -1,6 +1,6 @@
 {% load static %}{
-  "name": "COSTUEL",
-  "short_name": "COSTUEL",
+  "name": "OneMore",
+  "short_name": "OneMore",
   "description": "Sfida dei {{ DEFAULT_DAILY_GOAL }} piegamenti al giorno con gli amici",
   "lang": "it",
   "start_url": "/",

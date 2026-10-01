@@ -1,4 +1,4 @@
-{% load static %}// Service worker di COSTUEL: riceve le notifiche push anche ad app chiusa.
+{% load static %}// Service worker di OneMore: riceve le notifiche push anche ad app chiusa.
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
@@ -8,9 +8,9 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch (e) {
-    data = { title: "COSTUEL", body: event.data ? event.data.text() : "" };
+    data = { title: "OneMore", body: event.data ? event.data.text() : "" };
   }
-  const title = data.title || "COSTUEL";
+  const title = data.title || "OneMore";
   const options = {
     body: data.body || "",
     icon: "{% static 'challenge/icons/icon-192.png' %}",

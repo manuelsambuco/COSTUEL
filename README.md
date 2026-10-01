@@ -1,11 +1,11 @@
-# COSTUEL 💪
+# OneMore 💪
 
 [![Tests](https://github.com/manuelsambuco/COSTUEL/actions/workflows/tests.yml/badge.svg)](https://github.com/manuelsambuco/COSTUEL/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **A 100-push-ups-a-day challenge app for friends, and a data-science project built on top of it.**
 
-COSTUEL is an installable web app (PWA): log sets with one tap, see your friends' progress live,
+OneMore is an installable web app (PWA): log sets with one tap, see your friends' progress live,
 get a push notification when they train, compete in groups with daily, weekly and monthly
 leaderboards. The [`analysis/`](analysis/README.md) folder then studies the behaviour the app
 produces: habit formation, a "will they make it today?" model, and a randomized experiment on
@@ -15,7 +15,7 @@ whether notifications actually cause people to train.
   <tr>
     <td align="center"><img src="docs/screenshots/today.png" width="200" alt="Today: progress ring and quick-add buttons"><br><sub>Today</sub></td>
     <td align="center"><img src="docs/screenshots/friends.png" width="200" alt="Friends: requests and weekly leaderboard"><br><sub>Friends &amp; leaderboard</sub></td>
-    <td align="center"><img src="docs/screenshots/group.png" width="200" alt="Group: monthly ranking and invite link"><br><sub>Groups</sub></td>
+    <td align="center"><img src="docs/screenshots/group.png" width="200" alt="Group: weekly ranking and invite link"><br><sub>Groups</sub></td>
     <td align="center"><img src="docs/screenshots/stats.png" width="200" alt="Stats: streaks, weekly chart and monthly calendar"><br><sub>Statistics</sub></td>
   </tr>
 </table>

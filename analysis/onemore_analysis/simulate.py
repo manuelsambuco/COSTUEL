@@ -1,4 +1,4 @@
-"""Synthetic COSTUEL data with a known ground truth.
+"""Synthetic OneMore data with a known ground truth.
 
 The simulator reproduces the app's mechanics (daily goal, capped sets, notifications to
 friends) and plants effects whose true size is known, so every analysis in the notebooks

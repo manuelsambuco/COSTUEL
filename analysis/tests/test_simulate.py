@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from costuel_analysis import SimConfig, simulate
-from costuel_analysis.simulate import SET_SIZES
+from onemore_analysis import SimConfig, simulate
+from onemore_analysis.simulate import SET_SIZES
 
 SMALL = SimConfig(n_days=21, group_sizes=(3, 4, 5), seed=3)
 
