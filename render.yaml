@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: costuel
+    name: onemore
     runtime: python
     plan: free
     region: frankfurt

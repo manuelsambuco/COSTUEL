@@ -60,7 +60,7 @@ Servono 3 account gratuiti: **GitHub**, **Neon** (database), **Render** (server)
    git add .
    git commit -m "OneMore - fase 1"
    git branch -M main
-   git remote add origin https://github.com/TUO-UTENTE/costuel.git
+   git remote add origin https://github.com/TUO-UTENTE/onemore.git
    git push -u origin main
    ```
    Il file `.env` NON viene caricato (è in `.gitignore`): le chiavi restano sul tuo PC.
@@ -75,7 +75,7 @@ Servono 3 account gratuiti: **GitHub**, **Neon** (database), **Render** (server)
    - `VAPID_CONTACT` → `mailto:tuaemail@...`
    - `SIGNUP_CODE` → un codice a tua scelta da dare solo agli amici
 
-   Dopo il deploy l'app è su `https://costuel-xxxx.onrender.com`.
+   Dopo il deploy l'app è su `https://onemore-xxxx.onrender.com`.
    Per entrare in /admin (facoltativo): la Shell di Render non c'è nel piano gratuito, quindi
    crea l'amministratore dal tuo PC puntando al database di Neon:
    ```powershell
