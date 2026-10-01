@@ -1,6 +1,6 @@
 # OneMore 💪
 
-[![Tests](https://github.com/manuelsambuco/COSTUEL/actions/workflows/tests.yml/badge.svg)](https://github.com/manuelsambuco/COSTUEL/actions/workflows/tests.yml)
+[![Tests](https://github.com/manuelsambuco/OneMore/actions/workflows/tests.yml/badge.svg)](https://github.com/manuelsambuco/OneMore/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **A 100-push-ups-a-day challenge app for friends, and a data-science project built on top of it.**
